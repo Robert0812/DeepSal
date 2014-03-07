@@ -3,6 +3,7 @@ from sals.utils.Data import DataMan_mnist
 import numpy as np
 import theano
 import theano.tensor as T 
+import time 
 
 class LogisticRegression(object):
 	''' 
@@ -24,24 +25,20 @@ class LogisticRegression(object):
 			name = 'b', borrow=True)
 
 		self.p_y_given_x = T.nnet.softmax(T.dot(self.x, self.W) + self.b)
-
 		self.y_pred = T.argmax(self.p_y_given_x, axis=1)
-
 		self.params = [self.W, self.b]
 
+	def output(self):
+		# prediction
+		return self.y_pred
 
-	def negative_log_likelihood(self):
-
+	def costs(self):
+		# negative_log_likelihood
 		return -T.mean(T.log(self.p_y_given_x)[T.arange(self.y.shape[0]), self.y])
 
 
-	def costs(self):
-
-		return self.negative_log_likelihood()
-
-
 	def errors(self):
-
+		# error 
 		if self.y.ndim != self.y_pred.ndim:
 			raise ValueError('y should have the same shape as self.y_pred')
 
@@ -55,8 +52,8 @@ class LogisticRegression(object):
 		'''
 			return update rules
 		'''
-		g_W = T.grad(cost=self.negative_log_likelihood(), wrt=self.W)
-		g_b = T.grad(cost=self.negative_log_likelihood(), wrt=self.b)
+		g_W = T.grad(cost=self.costs(), wrt=self.W)
+		g_b = T.grad(cost=self.costs(), wrt=self.b)
 		update_w = (self.W, self.W - learning_rate * g_W)
 		update_b = (self.b, self.b - learning_rate * g_b)
 		updates = [update_w, update_b]
@@ -73,7 +70,7 @@ class sgd_optimizer(object):
 		self.n_epochs = n_epochs
 		self.model = model
 
-	def fit(self):
+	def run(self):
 
 		index = T.lscalar()
 		test_model = theano.function(inputs=[index,], 
@@ -103,20 +100,22 @@ class sgd_optimizer(object):
 		n_batches_valid = self.data.valid_x.get_value(borrow=True).shape[0]/self.batch_size
 		n_batches_test = self.data.test_x.get_value(borrow=True).shape[0]/self.batch_size
 
+		start_time = time.clock()
 		epoch = 0
-		done_looping = False 
-		
-		while (epoch < self.n_epochs) and (not done_looping):
+		while (epoch < self.n_epochs):
 			epoch += 1
-
 			for batch_index in range(n_batches_train):
 				batch_avg_cost = train_model(batch_index)
 				
 				if epoch % 5 == 0:
 					valid_losses = [valid_model(i) for i in range(n_batches_valid)]
-					print 'epoch {0:03d}, minibatch {1:02d}/{2:02d}, validation error {3:.2f} %'.format(epoch, 
-						batch_index, n_batches_train, np.mean(valid_losses)*100.)
+					test_losses = [test_model(i) for i in xrange(n_batches_test)]
+					print 'epoch {0:03d}, minibatch {1:02d}/{2:02d}, validation error {3:.2f} %, testing error {4:.2f} %'.format(epoch, 
+						batch_index, n_batches_train, np.mean(valid_losses)*100., np.mean(test_losses)*100.)
 
+		end_time = time.clock()
+		print 'The code run for %d epochs, with %f epochs/sec' % (
+        			epoch, 1. * epoch / (end_time - start_time))
 
 if __name__ == '__main__':
 
@@ -129,6 +128,7 @@ if __name__ == '__main__':
 	sgd = sgd_optimizer(data = mnist,  
 					model = logreg,
 					batch_size=600, 
-					learning_rate=0.13,
+					learning_rate=0.2,
 					n_epochs=200)
-	sgd.fit()
+	sgd.run()
+
