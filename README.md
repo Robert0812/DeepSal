@@ -1,4 +1,4 @@
 DeepSal
 =======
 
-Deep learning for salience
+Deep learning for saliency detection. 
