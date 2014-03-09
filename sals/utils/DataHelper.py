@@ -74,12 +74,9 @@ class DataMan_mnist(DataMan):
 	def shared_dataset(self, data_xy):
 
 		data_x, data_y = data_xy
-		shared_x = theano.shared(np.asarray(data_x,
-												dtype=theano.config.floatX), 
-												borrow=True)
-		shared_y = theano.shared(np.asarray(data_y, 
-												dtype=theano.config.floatX),
-												borrow=True)
+		shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX), borrow=True)
+		shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX), borrow=True)
+		
 		# we will have to cast it to int. 
 		return shared_x, T.cast(shared_y, 'int32')
 		#def group(self, data, batchsize):
