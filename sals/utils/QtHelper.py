@@ -20,7 +20,7 @@ from PyQt4.QtCore import *
 import string 
 import random 
 
-from sals.utils.PIL import *
+from sals.utils.ImageHelper import *
 
 try: 
     from qimage2ndarray import *
@@ -91,25 +91,31 @@ class viewer(QWidget):
 
         if imfiles is None:
             if fpath is None: 
-                fpath = '.'
+                fpath = '../../../reid_jrnl/salgt/data/gallery'
             imfolder = QFileDialog.getExistingDirectory(None,
                 'Select path', fpath, QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks)
-            print imfolder
+            
             imfiles = glob(str(imfolder) + '/*.bmp')
             imfiles.sort()
 
         self.imfiles = imfiles
+
         self.initWin()
 
     def initWin(self):
 
-        self.setGeometry(QRect(1095, 10, 400, 820))
+        self.setGeometry(QRect(30, 10, 700, 820))
         self.centralwidget = QWidget(self)
         self.imlabel = QLabel(self.centralwidget)
-        self.imlabel.setGeometry(QRect(65, 30, 270, 720))
+        self.imlabel.setGeometry(QRect(375, 30, 270, 720))
+
+        self.list = QListWidget(self.centralwidget)
+        self.list.setGeometry(QRect(10, 30, 300, 720))
+        for f in self.imfiles:
+            self.list.addItem(os.path.basename(f))
 
         self.widget1 = QWidget(self.centralwidget)
-        self.widget1.setGeometry(QRect(10, 730, 380, 100))
+        self.widget1.setGeometry(QRect(320, 730, 380, 100))
         self.horizontalLayout = QHBoxLayout(self.widget1)
         self.btn_prev = QPushButton(self.widget1)
         self.btn_next = QPushButton(self.widget1)
