@@ -99,6 +99,7 @@ class viewer(QWidget):
             imfiles.sort()
 
         self.imfiles = imfiles
+        self.imdir = os.path.dirname(imfiles[0])
 
         self.initWin()
 
@@ -107,10 +108,10 @@ class viewer(QWidget):
         self.setGeometry(QRect(30, 10, 700, 820))
         self.centralwidget = QWidget(self)
         self.imlabel = QLabel(self.centralwidget)
-        self.imlabel.setGeometry(QRect(375, 30, 270, 720))
+        self.imlabel.setGeometry(QRect(380, 30, 270, 720))
 
         self.list = QListWidget(self.centralwidget)
-        self.list.setGeometry(QRect(10, 30, 300, 720))
+        self.list.setGeometry(QRect(30, 30, 300, 720))
         for f in self.imfiles:
             self.list.addItem(os.path.basename(f))
 
@@ -126,7 +127,9 @@ class viewer(QWidget):
 
         QObject.connect(self.btn_next, SIGNAL("clicked()"), self.slot_next)
         QObject.connect(self.btn_prev, SIGNAL("clicked()"), self.slot_prev)
-
+        QObject.connect(self.list, SIGNAL("itemSelectionChanged()"), self.show_item)
+        #QObject.connect(self.list, SIGNAL("itemClicked(QListWidgetItem *)"), self.show_item) 
+        
         self.index = 0
         #qimage = QPixmap(self.imfiles[self.index])
         #self.imlabel.setPixmap(qimage.scaled(self.imlabel.size(), Qt.KeepAspectRatio))
@@ -134,6 +137,20 @@ class viewer(QWidget):
         self.setWindowTitle('Image Viewer')
         self.show()
 
+    def show_item(self):
+        
+        item = self.list.currentItem()
+
+        qpixmap = QPixmap(self.imdir + '/' + str(item.text()))
+        qimage = qpixmap.toImage()
+        imgarr = rgb_view(qimage)
+        draw0 = imresize(imgarr, (self.imlabel.height(), self.imlabel.width()), interp='bicubic')
+
+        draw1 = draw0 #self.customized_function(draw0, fidx)
+         
+        qimage = array2qimage(draw1)
+        qpixmap_new = QPixmap.fromImage(qimage)
+        self.imlabel.setPixmap(qpixmap_new.scaled(self.imlabel.size(), Qt.KeepAspectRatio))
 
     def slot_prev(self):
         ''' previous button '''
