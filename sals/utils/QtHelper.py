@@ -94,29 +94,33 @@ class viewer(QWidget):
                 fpath = '../../../reid_jrnl/salgt/data/gallery'
             imfolder = QFileDialog.getExistingDirectory(None,
                 'Select path', fpath, QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks)
-            
-            imfiles = glob(str(imfolder) + '/*.bmp')
+
+            imfiles = glob(str(imfolder) + '/*.jpg')
             imfiles.sort()
 
         self.imfiles = imfiles
         self.imdir = os.path.dirname(imfiles[0])
 
+        qpixmap = QPixmap(imfiles[0])
+        self.w = qpixmap.width()
+        self.h = qpixmap.height()
         self.initWin()
 
     def initWin(self):
 
-        self.setGeometry(QRect(30, 10, 700, 820))
+        self.setGeometry(QRect(30, 10, 380 + self.w, self.h+60))
         self.centralwidget = QWidget(self)
         self.imlabel = QLabel(self.centralwidget)
-        self.imlabel.setGeometry(QRect(380, 30, 270, 720))
+        self.imlabel.setGeometry(QRect(360, 30, self.w, self.h))
 
         self.list = QListWidget(self.centralwidget)
-        self.list.setGeometry(QRect(30, 30, 300, 720))
+        self.list.setGeometry(QRect(30, 30, 300, self.h))
         for f in self.imfiles:
             self.list.addItem(os.path.basename(f))
 
+        '''
         self.widget1 = QWidget(self.centralwidget)
-        self.widget1.setGeometry(QRect(320, 730, 380, 100))
+        self.widget1.setGeometry(QRect(320, self.h+10, self.w+100, 100))
         self.horizontalLayout = QHBoxLayout(self.widget1)
         self.btn_prev = QPushButton(self.widget1)
         self.btn_next = QPushButton(self.widget1)
@@ -127,9 +131,11 @@ class viewer(QWidget):
 
         QObject.connect(self.btn_next, SIGNAL("clicked()"), self.slot_next)
         QObject.connect(self.btn_prev, SIGNAL("clicked()"), self.slot_prev)
+        '''
         QObject.connect(self.list, SIGNAL("itemSelectionChanged()"), self.show_item)
         #QObject.connect(self.list, SIGNAL("itemClicked(QListWidgetItem *)"), self.show_item) 
         
+
         self.index = 0
         #qimage = QPixmap(self.imfiles[self.index])
         #self.imlabel.setPixmap(qimage.scaled(self.imlabel.size(), Qt.KeepAspectRatio))
