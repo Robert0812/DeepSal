@@ -84,7 +84,7 @@ class DataMan_mnist(DataMan):
 
 	def share2gpumem(self, data):
 		''' share current data into GPU memory '''
-
+		print 'sharing data into GPU memory ...'
 		train_set, valid_set, test_set = data
 		self.test_x, self.test_y = self.shared_dataset(test_set)
 		self.valid_x, self.valid_y = self.shared_dataset(valid_set)

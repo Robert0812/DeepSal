@@ -1,64 +1,10 @@
-from sals.utils.Data import DataMan_mnist
+from sals.utils.DataHelper import DataMan_mnist
+from sals.models import LogisticRegression
 
 import numpy as np
 import theano
 import theano.tensor as T 
 import time 
-
-class LogisticRegression(object):
-	''' 
-		define the learning cost, evaluation error, and update 
-	'''
-
-	def __init__(self, dim, n_class):
-
-		print 'building model: logistic regression'
-		self.x = T.matrix('x')
-		self.y = T.ivector('y')
-
-		self.W = theano.shared(value=np.zeros((dim, n_class), 
-			dtype = theano.config.floatX), 
-			name= 'W', borrow=True)
-
-		self.b = theano.shared(value=np.zeros((n_class,), 
-			dtype = theano.config.floatX), 
-			name = 'b', borrow=True)
-
-		self.p_y_given_x = T.nnet.softmax(T.dot(self.x, self.W) + self.b)
-		self.y_pred = T.argmax(self.p_y_given_x, axis=1)
-		self.params = [self.W, self.b]
-
-	def output(self):
-		# prediction
-		return self.y_pred
-
-	def costs(self):
-		# negative_log_likelihood
-		return -T.mean(T.log(self.p_y_given_x)[T.arange(self.y.shape[0]), self.y])
-
-
-	def errors(self):
-		# error 
-		if self.y.ndim != self.y_pred.ndim:
-			raise ValueError('y should have the same shape as self.y_pred')
-
-		if self.y.dtype.startswith('int'):
-			return T.mean(T.neq(self.y_pred, self.y))
-		else:
-			raise NotImplementedError()
-
-
-	def updates(self, learning_rate):
-		'''
-			return update rules
-		'''
-		g_W = T.grad(cost=self.costs(), wrt=self.W)
-		g_b = T.grad(cost=self.costs(), wrt=self.b)
-		update_w = (self.W, self.W - learning_rate * g_W)
-		update_b = (self.b, self.b - learning_rate * g_b)
-		updates = [update_w, update_b]
-		return updates
-
     	
 class sgd_optimizer(object):
 
@@ -116,6 +62,8 @@ class sgd_optimizer(object):
 		end_time = time.clock()
 		print 'The code run for %d epochs, with %f epochs/sec' % (
         			epoch, 1. * epoch / (end_time - start_time))
+		print 'Final model:'
+		print self.model.W.get_value(), self.model.b.get_value() 
 
 if __name__ == '__main__':
 
@@ -123,7 +71,7 @@ if __name__ == '__main__':
 	cpudata = mnist.load()
 	mnist.share2gpumem(cpudata)
 
-	logreg = LogisticRegression(dim=28*28, n_class=10)
+	logreg = LogisticRegression(n_in=28*28, n_out=10)
 
 	sgd = sgd_optimizer(data = mnist,  
 					model = logreg,
