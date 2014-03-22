@@ -62,6 +62,61 @@ class LogisticRegression(object):
 		updates = [update_w, update_b]
 		return updates
 		
+		
+class FCLayer(object):
+	''' Fully-connected layer'''
+
+	def __init__(self, n_in, n_out, input = None, 
+				W_init = None, b_init = None, actfun=None, tag='') :
+
+		print 'building model: Fully-connected layer' + tag 
+		if input is not None:
+			self.x = input 
+		else:
+			self.x = T.matrix('x')
+
+		if W_init is None:
+
+			wbound = np.sqrt(6./(n_in + n_out))
+
+			if actfun is T.nnet.sigmoid: wbound *= 4
+
+			rng = np.random.RandomState(1000)
+			W_values =  np.asarray(rng.uniform(low = -wbound, high= wbound, 
+				size=(n_in, n_out)), dtype = theano.config.floatX)							
+
+			self.W = theano.shared(value = W_values, name = 'W'+tag, borrow = True)
+
+		else:
+
+			self.W = W_init
+
+		if b_init is None:
+			
+			b_values = np.zeros((n_out,), dtype = theano.config.floatX)
+			
+			self.b = theano.shared(value = b_values, name = 'b'+tag, borrow = True)
+
+		else:
+			self.b = b_init
+
+		self.actfun = actfun
+
+		self.params = [self.W, self.b]
+
+	def output(self):
+		# feed forward output
+		y = T.dot(self.x, self.W) + self.b
+
+		if self.actfun is None:
+			return y 
+		else:
+			return self.actfun(y)
+
+	def regW(self, L):
+
+		return self.W.norm(L)/np.prod(self.W.get_value().shape)
+
 
 class sgd_optimizer(object):
 
