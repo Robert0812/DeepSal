@@ -61,6 +61,9 @@ class ConvLayer(object):
 
 		self.actfun = actfun
 		self.flatten  = flatten
+		self.filter_shape = filter_shape
+		self.image_shape = image_shape
+		self.pool_shape = pool_shape
 
 		self.params = [self.W, self.b]
 
