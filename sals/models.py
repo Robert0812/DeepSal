@@ -61,7 +61,7 @@ class LogisticRegression(object):
 		update_b = (self.b, self.b - learning_rate * g_b)
 		updates = [update_w, update_b]
 		return updates
-		
+
 		
 class FCLayer(object):
 	''' Fully-connected layer'''
@@ -116,6 +116,93 @@ class FCLayer(object):
 	def regW(self, L):
 
 		return self.W.norm(L)/np.prod(self.W.get_value().shape)
+
+
+class ConvLayer(object):
+	'''
+	Convolutional layer
+
+	image_shape: (batch size, num input feature maps, image height, image width)
+
+	filter_shape: (number of filters, num input feature maps, filter height,filter width)
+
+	pool_shape: tuple or list of length 2
+
+	'''
+
+
+	def __init__(self, image_shape, filter_shape, pool_shape, 
+			input = None, W_init = None, b_init = None, 
+			actfun=None, flatten = False, tag='') :
+
+		print 'building model: convolutional layer' + tag 
+		if input is not None:
+			self.x = input 
+		else:
+			self.x = T.tensor4('x')
+
+		fan_in = np.prod(filter_shape[1:])
+		fan_out = (filter_shape[0] * np.prod(filter_shape[2:])/np.prod(pool_shape))
+
+		if W_init is None:
+
+			wbound = np.sqrt(6./(fan_in + fan_out))
+
+			if actfun is T.nnet.sigmoid: wbound *= 4
+
+			rng = np.random.RandomState(1000)
+			W_values =  np.asarray(rng.uniform(low = -wbound, high= wbound, 
+				size=filter_shape), dtype = theano.config.floatX)							
+
+			self.W = theano.shared(value = W_values, name = 'W'+tag, borrow = True)
+
+		else:
+
+			self.W = W_init
+
+		if b_init is None:
+			
+			b_values = np.zeros((filter_shape[0],), dtype = theano.config.floatX)
+			
+			self.b = theano.shared(value = b_values, name = 'b'+tag, borrow = True)
+
+		else:
+			self.b = b_init
+
+		self.actfun = actfun
+		self.flatten  = flatten
+		self.filter_shape = filter_shape
+		self.image_shape = image_shape
+		self.pool_shape = pool_shape
+
+		self.params = [self.W, self.b]
+
+	def output(self):
+		# convolution output
+		conv_out = T.nnet.conv.conv2d(
+					input=self.x, filters=self.W, 
+					filter_shape = self.filter_shape, 
+					image_shape=self.image_shape)
+
+		# max-pooling output
+		pooled_out = T.signal.downsample.max_pool_2d(
+				input = conv_out,
+				ds = self.pool_shape,
+				ignore_border=True)
+
+		y = pooled_out + self.b.dimshuffle('x', 0, 'x', 'x')
+
+		if self.actfun is not None: y = self.actfun(y)
+
+		if self.flatten is True:
+			y = y.flatten(2)
+
+		return y
+
+	def regW(self, L):
+
+		return self.W.norm(L)/np.prod(self.W.get_value().shape)
+
 
 
 class sgd_optimizer(object):

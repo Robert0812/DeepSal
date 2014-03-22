@@ -25,7 +25,7 @@ class ConvLayer(object):
 			input = None, W_init = None, b_init = None, 
 			actfun=None, flatten = False, tag='') :
 
-		print 'building model: Fully-connected layer' + tag 
+		print 'building model: convolutional layer' + tag 
 		if input is not None:
 			self.x = input 
 		else:
