@@ -204,9 +204,38 @@ class ConvLayer(object):
 		return self.W.norm(L)/np.prod(self.W.get_value().shape)
 
 
+class GeneralModel(object):
+	''' a wapper for general model '''
+	def __init__(self, input, output, target, params,
+					cost_func, error_func, regularizers=0):
+
+		self.x = input
+		self.ypred = output
+		self.y = target
+		self.params = params
+		self.regularizers = regularizers
+		self.cost_func = cost_func
+		self.error_func = error_func
+
+	def costs(self):
+
+		return self.cost_func(self.ypred, self.y) + self.regularizers
+
+	def errors(self):
+
+		return self.error_func(self.ypred, self.y)
+
+	def updates(self, lr):
+		gparams = T.grad(cost = self.costs(), wrt = self.params)
+		updates = [(self.params[p], self.params[p] - lr*gparams[p]) 
+			for p in range(len(self.params))]
+		return updates 
+
 
 class sgd_optimizer(object):
-
+	'''
+	stochastic gradient descent optimization
+	'''
 	def __init__(self, data, model, batch_size, learning_rate, n_epochs):
 
 		self.data = data 
