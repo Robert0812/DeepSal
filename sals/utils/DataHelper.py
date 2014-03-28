@@ -61,7 +61,8 @@ class DataMan(object):
 
 		if savefile[-3:] == 'pkl':
 			f = open(savefile, 'wb')
-			cPickle.dump(data, savefile, -1) 
+			print savefile, len(data)
+			cPickle.dump(data, f, -1) 
 			f.close()
 
 		elif savefile[-3:] == 'csv':
