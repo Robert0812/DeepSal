@@ -1,4 +1,5 @@
 import theano.tensor as T
+from skimage.filter import threshold_otsu
 
 # activation functions
 
@@ -8,10 +9,18 @@ sigmoid = T.nnet.sigmoid
 
 softmax = T.nnet.softmax
 
+crosent = T.nnet.binary_crossentropy 
+
 def rectifier(x):
     return x * (x > 0.0)
 
 # cost functions
+def mean_cross_entropy(output, target):
+	return T.nnet.binary_crossentropy(output, target).mean()
+
+def mean_nneq_map(output, target):
+	thresh = threshold_otsu(output)
+	return T.neq(1.0*(output>thresh), target).mean()
 
 def mean_sqr(output, target):
     return ((output - target) ** 2).sum(axis=1).mean()
