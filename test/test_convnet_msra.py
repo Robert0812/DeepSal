@@ -16,6 +16,14 @@ if __name__ == '__main__':
 	train_x, train_y = train
 	valid_x, valid_y = valid
 	test_x, test_y = test
+
+	n_train = train_y.shape[0]
+	train_y = train_y.reshape((n_train, -1))
+	n_valid = valid_y.shape[0]
+	valid_y = valid_y.reshape((n_valid, -1))
+	n_test = test_y.shape[0]
+	test_y = test_y.reshape((n_test, -1))
+
 	train_x = np.asarray(train_x, dtype = np.float32)
 	train_y = np.asarray(train_y, dtype =np.float32)
 	valid_x = np.asarray(valid_x, dtype = np.float32)
@@ -35,11 +43,11 @@ if __name__ == '__main__':
 	recfield = 2
 	nfilter1 = 32
 
-	x = T.matrix('x')
-	y = T.dtensor3('y')
+	x = T.dtensor4('x')
+	y = T.matrix('y')
 	
-	layer0 = x.reshape((bs, 3, imL, imL))
-	conv1 = ConvLayer(input = layer0, image_shape = (bs, 3, imL, imL),
+	#layer0 = x.reshape((bs, 3, imL, imL))
+	conv1 = ConvLayer(input = x, image_shape = (bs, 3, imL, imL),
 			filter_shape =(nfilter1, 3, filterL, filterL),
 			pool_shape = (recfield, recfield), 
 			flatten = True, 
@@ -49,13 +57,13 @@ if __name__ == '__main__':
 	fc2 = FCLayer(input=conv1.output(), n_in=nfilter1*outL*outL, n_out=imL*imL, actfun=sigmoid, tag='_fc2')
 	params_cmb = conv1.params + fc2.params 
 	#params_cmb = fc0.params + fc2.params
-	ypred = fc2.output().reshape((bs, imL, imL))
+	#ypred = fc2.output().reshape((bs, imL, imL))
 
 	model = GeneralModel(input=x, output=ypred,
 				target=y, params=params_cmb, 
 				regularizers = 0,
-				cost_func=mean_sqr_tmp,
-				error_func=mean_sqr_tmp)
+				cost_func=mean_sqr,
+				error_func=mean_sqr)
 
 	sgd = sgd_optimizer(data = msra,  
 					model = model,
