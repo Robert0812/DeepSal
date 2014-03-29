@@ -21,7 +21,7 @@ if __name__ == '__main__':
 	nfilter1 = 32
 
 	x = T.matrix('x')
-	y = T.matrix('y')
+	y = T.itensor3('y')
 	
 	layer0 = x.reshape((bs, 3, imL, imL))
 	conv1 = ConvLayer(input = layer0, image_shape = (bs, 3, imL, imL),
