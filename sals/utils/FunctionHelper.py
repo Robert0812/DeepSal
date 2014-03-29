@@ -9,8 +9,6 @@ sigmoid = T.nnet.sigmoid
 
 softmax = T.nnet.softmax
 
-crosent = T.nnet.binary_crossentropy 
-
 def rectifier(x):
     return x * (x > 0.0)
 
