@@ -139,16 +139,16 @@ class DataMan_msra(DataMan):
 			np.random.shuffle(train_x)
 			np.random.seed(123)
 			np.random.shuffle(train_y)
-			train_x = np.asarray(train_x)
-			train_y = np.asarray(train_y)
+			train_x = np.asarray(train_x, dtype=np.float32)
+			train_y = np.asarray(train_y, dtype=np.float32)
 
 			train = train_x[0:7000], train_y[0:7000]
 			valid = train_x[7000:], train_y[7000:]
 
 			test_x = [improc_func(pl.imread(fname)).transpose((2, 0, 1)) for fname in tst_img]
 			test_y = [(improc_func(pl.imread(fname))>127)*1.0 for fname in tst_msk]
-			test_x = np.asarray(test_x)
-			test_y = np.asarray(test_y)
+			test_x = np.asarray(test_x, dtype=np.float32)
+			test_y = np.asarray(test_y, dtype=np.float32)
 			test = [test_x, test_y]
 
 			data = [train, valid, test] 
