@@ -70,6 +70,6 @@ if __name__ == '__main__':
 	sgd = sgd_optimizer(data = msra,  
 					model = model,
 					batch_size=bs, 
-					learning_rate=0.2,
+					learning_rate=0.5,
 					n_epochs=1000)
 	sgd.fit()
