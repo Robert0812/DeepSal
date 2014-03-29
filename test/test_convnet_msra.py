@@ -58,6 +58,7 @@ if __name__ == '__main__':
 	params_cmb = conv1.params + fc2.params 
 	#params_cmb = fc0.params + fc2.params
 	#ypred = fc2.output().reshape((bs, imL, imL))
+	ypred = fc2.output()
 
 	model = GeneralModel(input=x, output=ypred,
 				target=y, params=params_cmb, 
