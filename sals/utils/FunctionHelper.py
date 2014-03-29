@@ -31,3 +31,6 @@ def mean_nll(output, target):
 def mean_nneq(output, target):
     pred = T.argmax(output, axis=1)
     return T.neq(pred, target).mean()
+
+def mean_sqr_tmp(output, target):
+	return ((output - target)**2).sum(axis=2).sum(axis=1).mean()/(48*48)

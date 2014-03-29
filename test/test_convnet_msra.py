@@ -12,7 +12,22 @@ if __name__ == '__main__':
 
 	msra = DataMan_msra('../data/msra.pkl')
 	cpudata = msra.load()
-	msra.share2gpumem(cpudata)
+	train, valid, test = cpudata
+	train_x, train_y = train
+	valid_x, valid_y = valid
+	test_x, test_y = test
+	train_x = np.asarray(train_x, dtype = np.float32)
+	train_y = np.asarray(train_y, dtype =np.float32)
+	valid_x = np.asarray(valid_x, dtype = np.float32)
+	valid_y = np.asarray(valid_y, dtype = np.float32)
+	test_x = np.asarray(test_x, dtype=np.float32)
+	test_y = np.asarray(test_y, dtype = np.float32)
+	train = [train_x, train_y]
+	valid = [valid_x, valid_y]
+	test = [test_x, test_y]
+	cpudata_new = [train, valid, test]
+
+	msra.share2gpumem(cpudata_new)
 
 	bs = 200
 	imL = 48
@@ -21,7 +36,7 @@ if __name__ == '__main__':
 	nfilter1 = 32
 
 	x = T.matrix('x')
-	y = T.itensor3('y')
+	y = T.dtensor3('y')
 	
 	layer0 = x.reshape((bs, 3, imL, imL))
 	conv1 = ConvLayer(input = layer0, image_shape = (bs, 3, imL, imL),
@@ -39,8 +54,8 @@ if __name__ == '__main__':
 	model = GeneralModel(input=x, output=ypred,
 				target=y, params=params_cmb, 
 				regularizers = 0,
-				cost_func=mean_cross_entropy,
-				error_func=mean_cross_entropy)
+				cost_func=mean_sqr_tmp,
+				error_func=mean_sqr_tmp)
 
 	sgd = sgd_optimizer(data = msra,  
 					model = model,

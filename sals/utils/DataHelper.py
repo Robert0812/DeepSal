@@ -165,8 +165,9 @@ class DataMan_msra(DataMan):
 		shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX), borrow=True)
 		shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX), borrow=True)
 		
-		#return shared_x, shared_y
-		return shared_x, T.cast(shared_y, 'int32')
+		return shared_x, shared_y
+
+		#return shared_x, T.cast(shared_y, 'int32')
 
 
 	def share2gpumem(self, data):
