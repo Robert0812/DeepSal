@@ -43,8 +43,8 @@ if __name__ == '__main__':
 	recfield = 2
 	nfilter1 = 32
 
-	x = T.tensor4(name='x', dtype=theano.config.floatX, borrow=True)
-	y = T.matrix(name='y', dtype=theano.config.floatX, borrow=True)
+	x = T.tensor4(name='x', dtype=theano.config.floatX)
+	y = T.matrix(name='y', dtype=theano.config.floatX)
 	
 	#layer0 = x.reshape((bs, 3, imL, imL))
 	conv1 = ConvLayer(input = x, image_shape = (bs, 3, imL, imL),
