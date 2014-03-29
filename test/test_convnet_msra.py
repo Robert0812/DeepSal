@@ -51,9 +51,10 @@ if __name__ == '__main__':
 			filter_shape =(nfilter1, 3, filterL, filterL),
 			pool_shape = (recfield, recfield), 
 			flatten = True, 
-			actfun=sigmoid)
+			actfun=sigmoid, 
+			tag='_fc1')
 
-	outL = (imL-filterL+1.)/recfield
+	outL = np.floor((imL-filterL+1.)/recfield)
 	fc2 = FCLayer(input=conv1.output(), n_in=nfilter1*outL*outL, n_out=imL*imL, actfun=sigmoid, tag='_fc2')
 	params_cmb = conv1.params + fc2.params 
 	#params_cmb = fc0.params + fc2.params
