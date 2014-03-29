@@ -132,19 +132,23 @@ class DataMan_msra(DataMan):
 
 			improc_func = lambda im: imresize(im, sz, interp='bicubic') 
 
-			train_x = [improc_func(pl.imread(fname)) for fname in trn_img]
-			train_y = [improc_func(pl.imread(fname)) for fname in trn_msk]
+			train_x = [improc_func(pl.imread(fname)).transpose((2, 0, 1)) for fname in trn_img]
+			train_y = [(improc_func(pl.imread(fname))>127)*1. for fname in trn_msk]
 
 			np.random.seed(123)
 			np.random.shuffle(train_x)
 			np.random.seed(123)
 			np.random.shuffle(train_y)
+			train_x = np.asarray(train_x)
+			train_y = np.asarray(train_y)
 
-			test_x = [improc_func(pl.imread(fname)) for fname in tst_img]
-			test_y = [improc_func(pl.imread(fname)) for fname in tst_msk]
+			train = train_x[0:7000], train_y[0:7000]
+			valid = train_x[7000:], train_y[7000:]
 
-			train = [[train_x[id] for id in range(7000)], [train_y[id] for id in range(7000)]]
-			valid = [[train_x[id] for id in range(7001, len(train_x))], [train_y[id] for id in range(7001, len(train_y))]]
+			test_x = [improc_func(pl.imread(fname)).transpose((2, 0, 1)) for fname in tst_img]
+			test_y = [(improc_func(pl.imread(fname))>127)*1.0 for fname in tst_msk]
+			test_x = np.asarray(test_x)
+			test_y = np.asarray(test_y)
 			test = [test_x, test_y]
 
 			data = [train, valid, test] 
