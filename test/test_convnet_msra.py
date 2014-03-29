@@ -64,8 +64,8 @@ if __name__ == '__main__':
 	model = GeneralModel(input=x, output=ypred,
 				target=y, params=params_cmb, 
 				regularizers = 0,
-				cost_func=mean_sqr,
-				error_func=mean_sqr)
+				cost_func=mean_sqr_map,
+				error_func=mean_sqr_map)
 
 	sgd = sgd_optimizer(data = msra,  
 					model = model,
