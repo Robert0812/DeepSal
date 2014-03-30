@@ -12,30 +12,7 @@ if __name__ == '__main__':
 
 	msra = DataMan_msra('../data/msra.pkl')
 	cpudata = msra.load()
-	train, valid, test = cpudata
-	train_x, train_y = train
-	valid_x, valid_y = valid
-	test_x, test_y = test
-
-	n_train = train_y.shape[0]
-	train_y = train_y.reshape((n_train, -1))
-	n_valid = valid_y.shape[0]
-	valid_y = valid_y.reshape((n_valid, -1))
-	n_test = test_y.shape[0]
-	test_y = test_y.reshape((n_test, -1))
-
-	train_x = np.asarray(train_x, dtype = np.float32)
-	train_y = np.asarray(train_y, dtype =np.float32)
-	valid_x = np.asarray(valid_x, dtype = np.float32)
-	valid_y = np.asarray(valid_y, dtype = np.float32)
-	test_x = np.asarray(test_x, dtype=np.float32)
-	test_y = np.asarray(test_y, dtype = np.float32)
-	train = [train_x, train_y]
-	valid = [valid_x, valid_y]
-	test = [test_x, test_y]
-	cpudata_new = [train, valid, test]
-
-	msra.share2gpumem(cpudata_new)
+	msra.share2gpumem(cpudata)
 
 	bs = 200
 	imL = 48
