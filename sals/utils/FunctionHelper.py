@@ -14,7 +14,10 @@ def rectifier(x):
 
 # cost functions
 def mean_cross_entropy(output, target):
-	return T.nnet.binary_crossentropy(output, target).mean()
+	return T.nnet.binary_crossentropy(output, target).sum(axis=1).mean()
+
+def mean_cross_entropy_map(output, target):
+	return T.nnet.binary_crossentropy(output, target).sum(axis=1).mean()/(48*48)
 
 def mean_nneq_map(output, target):
 	thresh = threshold_otsu(output)
