@@ -246,6 +246,9 @@ class sgd_optimizer(object):
 		self.batch_size = batch_size
 		self.n_epochs = n_epochs
 		self.model = model
+		self.lr = learning_rate
+		self.lr_decay = learning_rate_decay
+		self.valid_loss_decay = valid_loss_decay
 
 	def fit(self):
 
@@ -287,7 +290,7 @@ class sgd_optimizer(object):
 			#print self.model.params[0].get_value().max()
 			for batch_index in range(n_batches_train):
 
-				batch_avg_cost = train_model(batch_index, learning_rate)
+				batch_avg_cost = train_model(batch_index, self.lr)
 
 				t = (epoch-1) * n_batches_train + batch_index
 				
@@ -295,8 +298,8 @@ class sgd_optimizer(object):
 					valid_losses = [valid_model(i) for i in range(n_batches_valid)]
 					test_losses = [test_model(i) for i in xrange(n_batches_test)]
 					decrease = valid_loss_prev - np.mean(valid_losses) 
-					if decrease > valid_loss_decay:
-						learning_rate *= learning_rate_decay
+					if decrease > self.valid_loss_decay:
+						self.lr *= self.lr_decay
 						valid_loss_prev = np.mean(valid_losses)
 						
 					print 'epoch {0:03d}, minibatch {1:02d}/{2:02d}, validation error {3:.2f} %, testing error {4:.2f} %'.format(epoch, 
