@@ -236,17 +236,30 @@ class sgd_optimizer(object):
 	'''
 	stochastic gradient descent optimization
 	'''
-	def __init__(self, data, model, batch_size, learning_rate, n_epochs):
+	def __init__(self, data, model, batch_size=10, 
+		learning_rate=0.1,
+		valid_loss_decay = 1e-3,
+		learning_rate_decay=0.95,
+		n_epochs=200):
 
 		self.data = data 
 		self.batch_size = batch_size
-		self.lr = learning_rate
 		self.n_epochs = n_epochs
 		self.model = model
 
 	def fit(self):
 
 		index = T.lscalar()
+		lr = T.fscalar()
+
+		train_model = theano.function(inputs=[index, lr], 
+			outputs=self.model.costs(), 
+			updates=self.model.updates(lr),
+			givens={
+				self.model.x: self.data.train_x[index*self.batch_size : (index+1)*self.batch_size],
+				self.model.y: self.data.train_y[index*self.batch_size : (index+1)*self.batch_size]
+			})
+
 		test_model = theano.function(inputs=[index,], 
 			outputs=self.model.errors(), 
 			givens={
@@ -261,14 +274,6 @@ class sgd_optimizer(object):
 				self.model.y: self.data.valid_y[index*self.batch_size : (index+1)*self.batch_size]
 			})
 
-		train_model = theano.function(inputs=[index,], 
-			outputs=self.model.costs(), 
-			updates=self.model.updates(self.lr),
-			givens={
-				self.model.x: self.data.train_x[index*self.batch_size : (index+1)*self.batch_size],
-				self.model.y: self.data.train_y[index*self.batch_size : (index+1)*self.batch_size]
-			})
-
 		print 'fitting ...'
 		n_batches_train = self.data.train_x.get_value(borrow=True).shape[0]/self.batch_size
 		n_batches_valid = self.data.valid_x.get_value(borrow=True).shape[0]/self.batch_size
@@ -276,17 +281,27 @@ class sgd_optimizer(object):
 
 		start_time = time.clock()
 		epoch = 0
+		valid_loss_prev = 1
 		while (epoch < self.n_epochs):
 			epoch += 1
 			#print self.model.params[0].get_value().max()
 			for batch_index in range(n_batches_train):
-				batch_avg_cost = train_model(batch_index)
+
+				batch_avg_cost = train_model(batch_index, learning_rate)
+
+				t = (epoch-1) * n_batches_train + batch_index
 				
-				if epoch % 5 == 0:
+				if t % 10 == 0:
 					valid_losses = [valid_model(i) for i in range(n_batches_valid)]
 					test_losses = [test_model(i) for i in xrange(n_batches_test)]
+					decrease = valid_loss_prev - np.mean(valid_losses) 
+					if decrease > valid_loss_decay:
+						learning_rate *= learning_rate_decay
+						valid_loss_prev = np.mean(valid_losses)
+						
 					print 'epoch {0:03d}, minibatch {1:02d}/{2:02d}, validation error {3:.2f} %, testing error {4:.2f} %'.format(epoch, 
 						batch_index, n_batches_train, np.mean(valid_losses)*100., np.mean(test_losses)*100.)
+
 
 		end_time = time.clock()
 		print 'The code run for %d epochs, with %f epochs/sec' % (
