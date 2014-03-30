@@ -42,7 +42,7 @@ if __name__ == '__main__':
 			tag='_conv2')
 	
 	outL2 = np.floor((outL1-filterL2+1.)/recfield).astype(np.int)
-	fc3 = FCLayer(input=conv2.output(), n_in=nfilter2*outL2*out2, n_out=imL*imL, actfun=sigmoid, tag='_fc3')
+	fc3 = FCLayer(input=conv2.output(), n_in=nfilter2*outL2*outL2, n_out=imL*imL, actfun=sigmoid, tag='_fc3')
 	params_cmb = conv1.params + conv2.params + fc3.params 
 	#params_cmb = fc0.params + fc2.params
 	#ypred = fc2.output().reshape((bs, imL, imL))
