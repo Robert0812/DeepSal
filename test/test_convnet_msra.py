@@ -42,7 +42,7 @@ if __name__ == '__main__':
 				target=y, params=params_cmb, 
 				regularizers = 0,
 				cost_func=mean_cross_entropy_map,
-				error_func=mean_cross_entropy_map)
+				error_func=mean_nneq_map)
 
 	sgd = sgd_optimizer(data = msra,  
 					model = model,
