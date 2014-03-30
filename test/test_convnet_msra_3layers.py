@@ -33,7 +33,7 @@ if __name__ == '__main__':
 			actfun=sigmoid, 
 			tag='_conv1')
 
-	outL1 = np.floor((imL-filterL+1.)/recfield)
+	outL1 = np.floor((imL-filterL+1.)/recfield).astype(np.int)
 	conv2 = ConvLayer(input = conv1.output(), image_shape=(bs, nfilter1, outL1, outL1),
 			filter_shape = (nfilter2, nfilter1, filterL2, filterL2),
 			pool_shape=(recfield, recfield),
@@ -41,7 +41,7 @@ if __name__ == '__main__':
 			actfun=sigmoid,
 			tag='_conv2')
 	
-	outL2 = np.floor((outL1-filterL2+1.)/recfield)
+	outL2 = np.floor((outL1-filterL2+1.)/recfield).astype(np.int)
 	fc3 = FCLayer(input=conv2.output(), n_in=nfilter2*outL2*out2, n_out=imL*imL, actfun=sigmoid, tag='_fc3')
 	params_cmb = conv1.params + conv2.params + fc3.params 
 	#params_cmb = fc0.params + fc2.params
