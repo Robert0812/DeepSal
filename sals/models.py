@@ -244,7 +244,11 @@ class sgd_optimizer(object):
 
 		self.data = data 
 		self.batch_size = batch_size
-		self.n_epochs = n_epochs
+		if n_epochs > 0:
+			self.n_epochs = n_epochs
+		else:
+			self.n_epochs = np.inf
+			
 		self.model = model
 		self.lr = learning_rate
 		self.lr_decay = learning_rate_decay
