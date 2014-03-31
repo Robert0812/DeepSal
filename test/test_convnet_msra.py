@@ -48,5 +48,6 @@ if __name__ == '__main__':
 					model = model,
 					batch_size=bs, 
 					learning_rate=0.2,
+					learning_rate_decay=0.95,
 					n_epochs=1000)
 	sgd.fit()
