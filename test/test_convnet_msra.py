@@ -31,7 +31,7 @@ if __name__ == '__main__':
 			actfun=sigmoid, 
 			tag='_conv1')
 
-	outL = np.floor((imL-filterL+1.)/recfield)
+	outL = np.floor((imL-filterL+1.)/recfield).astype(np.int)
 	fc2 = FCLayer(input=conv1.output(), n_in=nfilter1*outL*outL, n_out=imL*imL, actfun=sigmoid, tag='_fc2')
 	params_cmb = conv1.params + fc2.params 
 	#params_cmb = fc0.params + fc2.params
