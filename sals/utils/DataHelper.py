@@ -5,10 +5,13 @@ import numpy as np
 from scipy.io import loadmat, savemat
 import theano 
 import theano.tensor as T
-from sals.utils.ImageHelper import imresize
+
 import glob 
 import ntpath
 import pylab as pl 
+
+from sals.utils.ImageHelper import imresize, imread
+from sals.utils.FunctionHelper import normalize_data, flatten
 
 class DataMan(object):
 
@@ -130,32 +133,43 @@ class DataMan_msra(DataMan):
 				tst_img.append(msra5000+'/'+ntpath.basename(single_image)[:-len('_smap.png')]+img_ext)	
 				tst_msk.append(msra5000+'/'+ntpath.basename(single_image)[:-len('_smap.png')]+msk_ext)
 
-			improc_func = lambda im: imresize(im, sz, interp='bicubic') 
+			# read image and preprocessing
+			print 'preprocessing ...'
+			resize_func = lambda im: imresize(im, sz, interp='bicubic')
+			preproc_data = lambda im: resize_func(im).transpose((2, 0, 1))
+			preproc_mask = lambda im: (resize_func(im)>127)*1.0
+			train_x = [preproc_data(imread(fname)) for fname in trn_img]
+			train_y = [preproc_mask(imread(fname)) for fname in trn_msk]
+			test_x = [preproc_data(imread(fname)) for fname in tst_img]
+			test_y = [preproc_mask(imread(fname)) for fname in tst_msk]
 
-			train_x = [improc_func(pl.imread(fname)).transpose((2, 0, 1)) for fname in trn_img]
-			train_y = [(improc_func(pl.imread(fname))>127)*1. for fname in trn_msk]
-
+			# shuffle training data
+			print 'shuffle data ...'
 			np.random.seed(123)
 			np.random.shuffle(train_x)
 			np.random.seed(123)
 			np.random.shuffle(train_y)
+
+			# flattern and dtype conversion
+			print 'flatten data ...'
 			train_x = np.asarray(train_x, dtype=np.float32)
 			train_y = np.asarray(train_y, dtype=np.float32)
-			n_train = train_y.shape[0]
-			train_y = train_y.reshape((n_train, -1))
-
-			train = [train_x[0:7000], train_y[0:7000]]
-			valid = [train_x[7000:], train_y[7000:]]
-
-			test_x = [improc_func(pl.imread(fname)).transpose((2, 0, 1)) for fname in tst_img]
-			test_y = [(improc_func(pl.imread(fname))>127)*1.0 for fname in tst_msk]
 			test_x = np.asarray(test_x, dtype=np.float32)
 			test_y = np.asarray(test_y, dtype=np.float32)
-			n_test = test_y.shape[0]
-			test_y = test_y.reshape((n_test, -1))
-			test = [test_x, test_y]
+			train_x = flatten(train_x)
+			train_y = flatten(train_y)
+			test_x = flatten(test_x)
+			test_y = flatten(test_y)
 
-			data = [train, valid, test] 
+			# PCA whitening
+			print 'PCA whitening ...'
+			train_x, test_x = normalize_data(train_x, test_x)
+
+			# split into train and valid
+			train = [train_x[0:7000], train_y[0:7000]]
+			valid = [train_x[7000:], train_y[7000:]]
+			test = [test_x, test_y]
+			data = [train, valid, test]
 			self.save(data, pklfile)
 
 		else:

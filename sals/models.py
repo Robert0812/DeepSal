@@ -302,8 +302,11 @@ class sgd_optimizer(object):
 						self.lr *= self.lr_decay
 						valid_loss_prev = np.mean(valid_losses)
 						
-					print 'epoch {0:03d}, minibatch {1:02d}/{2:02d}, validation error {3:.2f} %, testing error {4:.2f} %'.format(epoch, 
-						batch_index, n_batches_train, np.mean(valid_losses)*100., np.mean(test_losses)*100.)
+					print 'epoch {0:03d}, minibatch {1:02d}/{2:02d}, validation error {3:.2f} %, testing error {4:.2f} %, learning rate {5:.4f}'.format(epoch, 
+						batch_index, n_batches_train, 
+						np.mean(valid_losses)*100., 
+						np.mean(test_losses)*100.,
+						self.lr)
 
 
 		end_time = time.clock()

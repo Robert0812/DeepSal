@@ -1,8 +1,22 @@
 import theano.tensor as T
 from skimage.filter import threshold_otsu
+from sklearn.decomposition import PCA
 
-# activation functions
+''' preprocessing functions '''
+def normalize_data(X_train, X_test, n_dim=None):
+	if n_dim is None:
+		n_dim = X_train.shape[1]
+	print 'X_train:{}, X_test:{}'.format(X_train.shape, X_test.shape)
+	pca = PCA(n_components=n_dim, whiten=True)
+	pca.fit(X_train)
+	return [pca.transform(X_train), pca.transform(X_test)]
 
+def flatten(X):
+	n_X = X.shape[0]
+	return X.reshape((n_X, -1))
+
+
+''' activation functions '''
 tanh = T.tanh
 
 sigmoid = T.nnet.sigmoid
@@ -12,7 +26,8 @@ softmax = T.nnet.softmax
 def rectifier(x):
     return x * (x > 0.0)
 
-# cost functions
+
+''' cost functions '''
 def mean_cross_entropy(output, target):
 	return T.nnet.binary_crossentropy(output, target).sum(axis=1).mean()
 
