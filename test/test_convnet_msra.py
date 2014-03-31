@@ -20,16 +20,16 @@ if __name__ == '__main__':
 	recfield = 2
 	nfilter1 = 32
 
-	x = T.tensor4(name='x', dtype=theano.config.floatX)
+	x = T.matrix(name='x', dtype=theano.config.floatX)
 	y = T.matrix(name='y', dtype=theano.config.floatX)
 	
-	#layer0 = x.reshape((bs, 3, imL, imL))
-	conv1 = ConvLayer(input = x, image_shape = (bs, 3, imL, imL),
+	layer0 = x.reshape((bs, 3, imL, imL))
+	conv1 = ConvLayer(input = layer0, image_shape = (bs, 3, imL, imL),
 			filter_shape =(nfilter1, 3, filterL, filterL),
 			pool_shape = (recfield, recfield), 
 			flatten = True, 
 			actfun=sigmoid, 
-			tag='_fc1')
+			tag='_conv1')
 
 	outL = np.floor((imL-filterL+1.)/recfield)
 	fc2 = FCLayer(input=conv1.output(), n_in=nfilter1*outL*outL, n_out=imL*imL, actfun=sigmoid, tag='_fc2')
