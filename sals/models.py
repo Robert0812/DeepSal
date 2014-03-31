@@ -301,7 +301,7 @@ class sgd_optimizer(object):
 					if decrease > self.valid_loss_decay:
 						self.lr *= self.lr_decay
 						valid_loss_prev = np.mean(valid_losses)
-					print '#############################################'
+					print '################################################'
 					print 'epoch {0:03d}, minibatch {1:02d}/{2:02d}'.format(epoch, batch_index, n_batches_train)
 					print 'training error {0:.2f} %, learning_rate {1:.4f}'.format(
 						batch_avg_error*100., self.lr)
