@@ -16,6 +16,9 @@ from numpy import amin, amax, ravel, asarray, cast, arange, \
      ones, newaxis, transpose, mgrid, iscomplexobj, sum, zeros, uint8, \
      issubdtype, array
 
+from skimage.color import rgb2lab
+from sklearn.preprocessing import MinMaxScaler
+
 try:
     from PIL import Image, ImageFilter
 except ImportError:
@@ -470,3 +473,20 @@ def imfilter(arr,ftype):
     if ftype not in _tdict:
         raise ValueError("Unknown filter type.")
     return fromimage(im.filter(_tdict[ftype]))
+
+
+def imnormalize(rgbimg, scale_range=[0, 1]):
+    ''' convert image to lab color space, and normalize each channel to be [0, 1] range '''
+    labimg = rgb2lab(rgbimg)
+
+    mean_luminance = numpy.mean(labimg[:,:,0])
+
+    labimg[:,:,0] -= mean_luminance
+
+    h, w, c = labimg.shape
+    labimg = labimg.reshape(h*w, c)
+
+    scaler = MinMaxScaler(scale_range, copy=False)
+    labimg = scaler.fit_transform(labimg)
+
+    return labimg.reshape(h, w, c)

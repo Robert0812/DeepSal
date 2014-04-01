@@ -229,7 +229,10 @@ class GeneralModel(object):
 		gparams = T.grad(cost = self.costs(), wrt = self.params)
 		updates = [(self.params[p], self.params[p] - lr*gparams[p]) 
 			for p in range(len(self.params))]
-		return updates 
+		return updates
+
+	def outputs(self):
+		return self.ypred
 
 
 class sgd_optimizer(object):
@@ -248,7 +251,7 @@ class sgd_optimizer(object):
 			self.n_epochs = n_epochs
 		else:
 			self.n_epochs = np.inf
-			
+
 		self.model = model
 		self.lr = learning_rate
 		self.lr_decay = learning_rate_decay
@@ -288,29 +291,29 @@ class sgd_optimizer(object):
 
 		start_time = time.clock()
 		epoch = 0
-		valid_loss_prev = 1
+		valid_loss_prev = 2304
 		while (epoch < self.n_epochs):
 			epoch += 1
 			#print self.model.params[0].get_value().max()
 			for batch_index in range(n_batches_train):
-
+				t0 = time.clock()
 				[batch_avg_cost, batch_avg_error] = train_model(batch_index, self.lr)
+				t1 = time.clock()
+				print '{0:03d}.{1:03d}... cost: {2:.6f}, error: {3:.6f} ({4:.3f} sec)'.format(epoch,
+					batch_index, batch_avg_cost*100/2304, batch_avg_error*100/2304, t1-t0)
 
-				t = (epoch-1) * n_batches_train + batch_index
-				
-				if t % 10 == 0:
-					valid_losses = [valid_model(i) for i in range(n_batches_valid)]
-					test_losses = [test_model(i) for i in xrange(n_batches_test)]
-					decrease = valid_loss_prev - np.mean(valid_losses) 
-					if decrease > self.valid_loss_decay:
-						self.lr *= self.lr_decay
-						valid_loss_prev = np.mean(valid_losses)
-					print '################################################'
-					print 'epoch {0:03d}, minibatch {1:02d}/{2:02d}'.format(epoch, batch_index, n_batches_train)
-					print 'training error {0:.2f} %, learning_rate {1:.4f}'.format(
-						batch_avg_error*100., self.lr)
-					print 'validation error {0:.2f} %, testing error {1:.2f} %'.format(  
-						np.mean(valid_losses)*100., np.mean(test_losses)*100.)
+			if epoch%1 == 0:
+				valid_losses = [valid_model(i) for i in range(n_batches_valid)]
+				test_losses = [test_model(i) for i in xrange(n_batches_test)]
+				decrease = (valid_loss_prev - np.mean(valid_losses))/valid_loss_prev
+				if batch_avg_error*100./2304 < 13:
+					self.lr *= self.lr_decay
+					valid_loss_prev = np.mean(valid_losses)
+				print '=====================Test Output======================='
+				print 'Update learning_rate {0:.6f}'.format(self.lr)
+				print 'validation error {0:.2f} %, testing error {1:.2f} %'.format(  
+					np.mean(valid_losses)*100./2304, np.mean(test_losses)*100./2304)
+				print '======================================================='
 
 		end_time = time.clock()
 		print 'The code run for %d epochs, with %f epochs/sec' % (

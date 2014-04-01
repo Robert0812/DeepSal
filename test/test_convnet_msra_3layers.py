@@ -10,27 +10,27 @@ import time
 
 if __name__ == '__main__':
 
-	msra = DataMan_msra('../data/msra.pkl')
+	msra = DataMan_msra('../data/msra_norm.pkl')
 	cpudata = msra.load()
 	msra.share2gpumem(cpudata)
 
 	bs = 200
 	imL = 48
-	filterL = 6
+	filterL = 5
 	recfield = 2
 	nfilter1 = 32
-	nfilter2 = 16
-	filterL2= 4
+	nfilter2 = 32
+	filterL2= 5
 
-	x = T.tensor4(name='x', dtype=theano.config.floatX)
+	x = T.matrix(name='x', dtype=theano.config.floatX)
 	y = T.matrix(name='y', dtype=theano.config.floatX)
 	
-	#layer0 = x.reshape((bs, 3, imL, imL))
-	conv1 = ConvLayer(input = x, image_shape = (bs, 3, imL, imL),
+	layer0 = x.reshape((bs, 3, imL, imL))
+	conv1 = ConvLayer(input = layer0, image_shape = (bs, 3, imL, imL),
 			filter_shape =(nfilter1, 3, filterL, filterL),
 			pool_shape = (recfield, recfield), 
 			flatten = False, 
-			actfun=sigmoid, 
+			actfun=tanh, 
 			tag='_conv1')
 
 	outL1 = np.floor((imL-filterL+1.)/recfield).astype(np.int)
@@ -38,7 +38,7 @@ if __name__ == '__main__':
 			filter_shape = (nfilter2, nfilter1, filterL2, filterL2),
 			pool_shape=(recfield, recfield),
 			flatten=True,
-			actfun=sigmoid,
+			actfun=tanh,
 			tag='_conv2')
 	
 	outL2 = np.floor((outL1-filterL2+1.)/recfield).astype(np.int)
@@ -51,12 +51,14 @@ if __name__ == '__main__':
 	model = GeneralModel(input=x, output=ypred,
 				target=y, params=params_cmb, 
 				regularizers = 0,
-				cost_func=mean_cross_entropy_map,
+				cost_func=mean_sqr_map,
 				error_func=mean_sqr_map)
 
 	sgd = sgd_optimizer(data = msra,  
 					model = model,
 					batch_size=bs, 
-					learning_rate=0.2,
+					learning_rate=0.001,
+					valid_loss_decay = 0.005,
+					learning_rate_decay=0.99,
 					n_epochs=1000)
 	sgd.fit()

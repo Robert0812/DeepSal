@@ -32,11 +32,11 @@ def mean_cross_entropy(output, target):
 	return T.nnet.binary_crossentropy(output, target).sum(axis=1).mean()
 
 def mean_cross_entropy_map(output, target):
-	return T.nnet.binary_crossentropy(output, target).sum(axis=1).mean()/(48*48)
+	return T.nnet.binary_crossentropy(output, target).sum(axis=1).mean()
 
 def mean_nneq_map(output, target):
 	thresh = threshold_otsu(output)
-	return T.neq(1.0*(output>thresh), target).sum(axis=1).mean()/(48*48)
+	return T.neq(1.0*(output>thresh), target).sum(axis=1).mean()
 
 def mean_sqr(output, target):
     return ((output - target) ** 2).sum(axis=1).mean()
@@ -49,4 +49,4 @@ def mean_nneq(output, target):
     return T.neq(pred, target).mean()
 
 def mean_sqr_map(output, target):
-	return ((output - target)**2).sum(axis=1).mean()/(48*48)
+	return ((output - target)**2).sum(axis=1).mean()
