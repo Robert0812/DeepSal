@@ -261,7 +261,7 @@ class sgd_optimizer(object):
 	def fit(self):
 
 		index = T.lscalar()
-		lr = T.dscalar()
+		lr = T.fscalar()
 
 		train_model = theano.function(inputs=[index, lr], 
 			outputs=[self.model.costs(), self.model.errors()], 
