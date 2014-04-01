@@ -62,3 +62,16 @@ if __name__ == '__main__':
 					learning_rate_decay=0.99,
 					n_epochs=1000)
 	sgd.fit()
+
+	# evaluation and testing
+	train, valid, test = cpudata
+	test_x, test_y = test 
+
+	test_model = theano.function(inputs=[],
+		outputs=self.model.outputs(), 
+		givens={
+			model.x : msra.test_x,
+			model.y : msra.test_y
+		})
+
+	test_ypred = test_model()

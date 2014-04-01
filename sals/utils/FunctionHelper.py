@@ -50,3 +50,61 @@ def mean_nneq(output, target):
 
 def mean_sqr_map(output, target):
 	return ((output - target)**2).sum(axis=1).mean()
+
+
+''' evaluation functions for saliency map '''
+
+def get_confusion(gtmask, dtmask):
+    cfm = np.zeros((2, 2))
+    neg_gtmask = 1 - gtmask
+    neg_dtmask = 1 - dtmask
+    cfm[0, 0] = (neg_gtmask * neg_dtmask).sum() #tn
+    cfm[0, 1] = (neg_gtmask * dtmask).sum()     #fp
+    cfm[1, 0] = (gtmask * neg_dtmask).sum()     #fn
+    cfm[1, 1] = (gtmask * dtmask).sum()         #tp
+    return cfm
+
+def get_precision(confusion):
+    """
+    >>> precision([[5,1],[1,1]])
+    0.5
+    """
+    judged_pos = confusion[0][1] + confusion[1][1]
+    if judged_pos == 0:
+        return 0.0
+    return (confusion[1][1]/
+            float(judged_pos))
+
+def get_recall(confusion):
+    """
+    >>> recall([[5,1],[1,3]])
+    0.75
+    """
+    pos = confusion[1][0] + confusion[1][1]
+    if pos == 0:
+        return 0.0
+    return (confusion[1][1]/
+            float(pos))
+
+def get_fpr(confusion):
+    return confusion[0][1]/(confusion[0][1] + confusion[0][0])
+
+def get_tpr(confusion):
+    return confusion[1][1]/(confusion[1][1] + confusion[1][0])
+
+def get_fbeta(confusion, beta):
+    p = precision(confusion)
+    r = recall(confusion)
+    if p + r == 0.0:
+        return 0.0    
+    beta2 = beta ** 2
+    fscore = (1 + beta2) * (p * r) / (
+        beta2 * p + r)
+    return fscore
+
+def get_roc(true_mask, esti_mask):
+    cfm = get_confusion(true_mask, esti_mask)
+    prec = get_precision(cfm)
+    reca = get_recall(cfm)
+    return prec, reca
+

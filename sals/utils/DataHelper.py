@@ -109,6 +109,27 @@ class DataMan_msra(DataMan):
 		super(DataMan_msra, self).__init__(filepath)
 
 
+	def shared_dataset(self, data_xy):
+
+		data_x, data_y = data_xy
+
+		shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX), borrow=True)
+		shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX), borrow=True)
+		
+		return shared_x, shared_y
+
+		#return shared_x, T.cast(shared_y, 'int32')
+
+
+	def share2gpumem(self, data):
+		''' share current data into GPU memory '''
+		print 'sharing data into GPU memory ...'
+		train_set, valid_set, test_set = data
+		self.test_x, self.test_y = self.shared_dataset(test_set)
+		self.valid_x, self.valid_y = self.shared_dataset(valid_set)
+		self.train_x, self.train_y = self.shared_dataset(train_set)
+
+
 	def convert2pkl(self, pklfile, sz=(48, 48)):
 
 		if not os.path.isfile(pklfile):
@@ -174,24 +195,3 @@ class DataMan_msra(DataMan):
 
 		else:
 			print 'History pickle file exists!'
-
-
-	def shared_dataset(self, data_xy):
-
-		data_x, data_y = data_xy
-
-		shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX), borrow=True)
-		shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX), borrow=True)
-		
-		return shared_x, shared_y
-
-		#return shared_x, T.cast(shared_y, 'int32')
-
-
-	def share2gpumem(self, data):
-		''' share current data into GPU memory '''
-		print 'sharing data into GPU memory ...'
-		train_set, valid_set, test_set = data
-		self.test_x, self.test_y = self.shared_dataset(test_set)
-		self.valid_x, self.valid_y = self.shared_dataset(valid_set)
-		self.train_x, self.train_y = self.shared_dataset(train_set)
