@@ -113,8 +113,8 @@ class DataMan_msra(DataMan):
 
 		data_x, data_y = data_xy
 
-		shared_x = theano.shared(np.asarray(data_x, dtype=np.float32), borrow=True)
-		shared_y = theano.shared(np.asarray(data_y, dtype=np.float32), borrow=True)
+		shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX), borrow=True)
+		shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX), borrow=True)
 		
 		return shared_x, shared_y
 
