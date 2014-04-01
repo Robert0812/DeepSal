@@ -1,6 +1,7 @@
 import numpy as np
 import theano
 import theano.tensor as T 
+import theano.tensor.signal 
 from sals.utils.FunctionHelper import mean_nll, mean_nneq
 import time
 
@@ -309,11 +310,11 @@ class sgd_optimizer(object):
 				if batch_avg_error*100./2304 < 13:
 					self.lr *= self.lr_decay
 					valid_loss_prev = np.mean(valid_losses)
-				print '=====================Test Output======================='
+				print '===================Test Output===================='
 				print 'Update learning_rate {0:.6f}'.format(self.lr)
 				print 'validation error {0:.2f} %, testing error {1:.2f} %'.format(  
 					np.mean(valid_losses)*100./2304, np.mean(test_losses)*100./2304)
-				print '======================================================='
+				print '=================================================='
 
 		end_time = time.clock()
 		print 'The code run for %d epochs, with %f epochs/sec' % (
