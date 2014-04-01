@@ -299,7 +299,7 @@ class sgd_optimizer(object):
 				t0 = time.clock()
 				[batch_avg_cost, batch_avg_error] = train_model(batch_index, self.lr)
 				t1 = time.clock()
-				print '{0:03d}.{1:03d}... cost: {2:.6f}, error: {3:.6f} ({4:.3f} sec)'.format(epoch,
+				print '{0:d}.{1:02d}... cost: {2:.3f}, error: {3:.3f} ({4:.3f} sec)'.format(epoch,
 					batch_index, batch_avg_cost*100/2304, batch_avg_error*100/2304, t1-t0)
 
 			if epoch%1 == 0:
