@@ -1,7 +1,7 @@
 import numpy as np
 import theano
 import theano.tensor as T 
-import theano.tensor.signal 
+from theano.tensor.signal.downsample import max_pool_2d 
 from sals.utils.FunctionHelper import mean_nll, mean_nneq
 import time
 
@@ -186,7 +186,7 @@ class ConvLayer(object):
 					image_shape=self.image_shape)
 
 		# max-pooling output
-		pooled_out = T.signal.downsample.max_pool_2d(
+		pooled_out = max_pool_2d(
 				input = conv_out,
 				ds = self.pool_shape,
 				ignore_border=True)
