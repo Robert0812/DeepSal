@@ -59,7 +59,7 @@ if __name__ == '__main__':
 					batch_size=bs, 
 					learning_rate=0.001,
 					valid_loss_decay = 0.005,
-					learning_rate_decay=0.99,
+					learning_rate_decay=1,
 					n_epochs=1000)
 	sgd.fit()
 
@@ -75,3 +75,13 @@ if __name__ == '__main__':
 		})
 
 	test_ypred = test_model()
+	T = 20
+	thrs = np.linspace(1, 0, T)
+	rocs = np.zeros((2, T))
+
+	for i in range(len(thrs)):
+		test_ypred_binary = map(lambda x: x>=thrs[i], test_ypred)
+		roc_pair = map(lambda x, y: getoc(x, y), test_y, test_ypred_binary)
+		rocs[:, i] = np.asarray(roc_pair).mean(axis=0)
+	
+	pl.plot(rocs[0, :], rocs[1, :])

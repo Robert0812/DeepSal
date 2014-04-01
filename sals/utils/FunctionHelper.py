@@ -106,5 +106,5 @@ def get_roc(true_mask, esti_mask):
     cfm = get_confusion(true_mask, esti_mask)
     prec = get_precision(cfm)
     reca = get_recall(cfm)
-    return prec, reca
+    return reca, prec
 
