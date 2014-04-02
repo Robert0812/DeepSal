@@ -3,7 +3,14 @@ from skimage.filter import threshold_otsu
 from sklearn.decomposition import PCA
 
 ''' preprocessing functions '''
-def normalize_data(X_train, X_test, n_dim=None):
+def normalize01(X):
+	''' zeros mean and unit standard deviation '''
+	X -= X.mean(axis=0)
+	X /= X.std(axis=0)
+	return X
+
+def PCA_whitening(X_train, X_test, n_dim=None):
+	''' PCA whitening '''
 	if n_dim is None:
 		n_dim = X_train.shape[1]
 	print 'X_train:{}, X_test:{}'.format(X_train.shape, X_test.shape)
@@ -12,6 +19,7 @@ def normalize_data(X_train, X_test, n_dim=None):
 	return [pca.transform(X_train), pca.transform(X_test)]
 
 def flatten(X):
+	''' flatten data from axis 1 to end '''
 	n_X = X.shape[0]
 	return X.reshape((n_X, -1))
 
@@ -31,9 +39,6 @@ def rectifier(x):
 def mean_cross_entropy(output, target):
 	return T.nnet.binary_crossentropy(output, target).sum(axis=1).mean()
 
-def mean_cross_entropy_map(output, target):
-	return T.nnet.binary_crossentropy(output, target).sum(axis=1).mean()
-
 def mean_nneq_map(output, target):
 	thresh = threshold_otsu(output)
 	return T.neq(1.0*(output>thresh), target).sum(axis=1).mean()
@@ -47,9 +52,6 @@ def mean_nll(output, target):
 def mean_nneq(output, target):
     pred = T.argmax(output, axis=1)
     return T.neq(pred, target).mean()
-
-def mean_sqr_map(output, target):
-	return ((output - target)**2).sum(axis=1).mean()
 
 
 ''' evaluation functions for saliency map '''

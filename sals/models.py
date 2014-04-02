@@ -233,7 +233,7 @@ class GeneralModel(object):
 		return updates
 
 	def outputs(self):
-		return self.ypred
+		return self.ypred + self.y*0
 
 
 class sgd_optimizer(object):

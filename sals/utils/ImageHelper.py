@@ -475,18 +475,19 @@ def imfilter(arr,ftype):
     return fromimage(im.filter(_tdict[ftype]))
 
 
-def imnormalize(rgbimg, scale_range=[0, 1]):
+def imnormalize(rgbimg, mean_luminance=50):
     ''' convert image to lab color space, and normalize each channel to be [0, 1] range '''
     labimg = rgb2lab(rgbimg)
 
-    mean_luminance = numpy.mean(labimg[:,:,0])
+    #mean_luminance = numpy.mean(labimg[:,:,0])
 
     labimg[:,:,0] -= mean_luminance
 
-    h, w, c = labimg.shape
-    labimg = labimg.reshape(h*w, c)
+    #h, w, c = labimg.shape
+    #labimg = labimg.reshape(h*w, c)
 
-    scaler = MinMaxScaler(scale_range, copy=False)
-    labimg = scaler.fit_transform(labimg)
+    #scaler = MinMaxScaler(scale_range, copy=False)
+    #labimg = scaler.fit_transform(labimg)
 
-    return labimg.reshape(h, w, c)
+    #return labimg.reshape(h, w, c)
+    return labimg 
