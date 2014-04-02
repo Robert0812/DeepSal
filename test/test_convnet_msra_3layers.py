@@ -68,8 +68,8 @@ if __name__ == '__main__':
 	test_x, test_y = test 
 
 	test_model = theano.function(inputs=[],
-		outputs=self.model.outputs(), 
-		givens={
+		outputs = model.outputs(), 
+		givens = {
 			model.x : msra.test_x,
 			model.y : msra.test_y
 		})
@@ -84,4 +84,5 @@ if __name__ == '__main__':
 		roc_pair = map(lambda x, y: getoc(x, y), test_y, test_ypred_binary)
 		rocs[:, i] = np.asarray(roc_pair).mean(axis=0)
 	
-	pl.plot(rocs[0, :], rocs[1, :])
+	#pl.plot(rocs[0, :], rocs[1, :])
+	print thrs, rocs 
