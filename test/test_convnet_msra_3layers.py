@@ -60,7 +60,7 @@ if __name__ == '__main__':
 					learning_rate=0.001,
 					valid_loss_decay = 0.005,
 					learning_rate_decay=1,
-					n_epochs=1000)
+					n_epochs=10)
 	sgd.fit()
 
 	# evaluation and testing
@@ -70,8 +70,7 @@ if __name__ == '__main__':
 	test_model = theano.function(inputs=[],
 		outputs = model.outputs(), 
 		givens = {
-			model.x : msra.test_x,
-			model.y : msra.test_y
+			model.x : msra.test_x
 		})
 
 	test_ypred = test_model()
