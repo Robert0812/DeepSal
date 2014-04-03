@@ -94,19 +94,18 @@ def get_fpr(confusion):
 def get_tpr(confusion):
     return confusion[1][1]/(confusion[1][1] + confusion[1][0])
 
-def get_fbeta(confusion, beta):
-    p = precision(confusion)
-    r = recall(confusion)
-    if p + r == 0.0:
-        return 0.0    
-    beta2 = beta ** 2
-    fscore = (1 + beta2) * (p * r) / (
-        beta2 * p + r)
-    return fscore
-
 def get_roc(true_mask, esti_mask):
     cfm = get_confusion(true_mask, esti_mask)
     prec = get_precision(cfm)
     reca = get_recall(cfm)
     return reca, prec
 
+def get_fbeta(true_mask, esti_mask, beta2 = 0.3):
+    confusion = get_confusion(true_mask, esti_mask)
+    p = get_precision(confusion)
+    r = get_recall(confusion)
+    if p + r == 0.0:
+        return 0.0    
+    fscore = (1 + beta2) * (p * r) / (
+        beta2 * p + r)
+    return fscore

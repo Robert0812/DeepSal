@@ -11,7 +11,7 @@ import ntpath
 import pylab as pl 
 
 from sals.utils.ImageHelper import imresize, imread, imnormalize
-from sals.utils.FunctionHelper import normalize_data, flatten
+from sals.utils.FunctionHelper import normalize01, flatten
 
 class DataMan(object):
 
@@ -157,7 +157,7 @@ class DataMan_msra(DataMan):
 			# read image and preprocessing
 			print 'preprocessing ...'
 			resize_func = lambda im: imresize(im, sz, interp='bicubic')
-			preproc_data = lambda im: imnormalize(resize_func(im), scale_range=[-1, 1]).transpose((2, 0, 1))
+			preproc_data = lambda im: imnormalize(resize_func(im)).transpose((2, 0, 1))
 			preproc_mask = lambda im: (resize_func(im)>127)*1.0
 			train_x = [preproc_data(imread(fname)) for fname in trn_img]
 			train_y = [preproc_mask(imread(fname)) for fname in trn_msk]
@@ -182,9 +182,9 @@ class DataMan_msra(DataMan):
 			test_x = flatten(test_x)
 			test_y = flatten(test_y)
 
-			# PCA whitening
-			# print 'PCA whitening ...'
-			# train_x, test_x = normalize_data(train_x, test_x)
+			# normalize data to have zero mean and unit std
+			train_x = normalize01(train_x)
+			test_x = normalize01(test_x)
 
 			# split into train and valid
 			train = [train_x[0:7000], train_y[0:7000]]
@@ -195,3 +195,5 @@ class DataMan_msra(DataMan):
 
 		else:
 			print 'History pickle file exists!'
+
+	

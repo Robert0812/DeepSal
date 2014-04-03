@@ -10,7 +10,7 @@ import time
 
 if __name__ == '__main__':
 
-	msra = DataMan_msra('../data/msra_norm.pkl')
+	msra = DataMan_msra('../data/msra_norm2.pkl')
 	cpudata = msra.load()
 	msra.share2gpumem(cpudata)
 
@@ -60,29 +60,40 @@ if __name__ == '__main__':
 					learning_rate=0.001,
 					valid_loss_decay = 0.005,
 					learning_rate_decay=1,
-					n_epochs=3)
+					n_epochs=300)
 	sgd.fit()
 
 	# evaluation and testing
 	train, valid, test = cpudata
 	test_x, test_y = test 
 
-	test_model = theano.function(inputs=[],
+	index = T.lscalar()
+	test_model = theano.function(inputs=[index,],
 		outputs = model.outputs(), 
 		givens = {
-			model.x : msra.test_x,
-			model.y : msra.test_y
+			model.x : msra.test_x[index*bs:(index+1)*bs],
+			model.y : msra.test_y[index*bs:(index+1)*bs]
 		})
 
-	test_ypred = test_model()
+	n_test = test_x.shape[0]
+	n_batches_test = n_test/bs
+	test_ypred = [test_model(i) for i in xrange(n_batches_test)]
+	test_ypred = np.asarray(test_ypred).reshape(n_test, -1)
+
 	T = 20
 	thrs = np.linspace(1, 0, T)
-	rocs = np.zeros((2, T))
+	fbeta = np.zeros(T)
 
 	for i in range(len(thrs)):
 		test_ypred_binary = map(lambda x: x>=thrs[i], test_ypred)
-		roc_pair = map(lambda x, y: getoc(x, y), test_y, test_ypred_binary)
-		rocs[:, i] = np.asarray(roc_pair).mean(axis=0)
+		fbeta[i] = np.mean(map(lambda x, y: get_fbeta(x, y), test_y, test_ypred_binary))
 	
 	#pl.plot(rocs[0, :], rocs[1, :])
-	print thrs, rocs 
+	print fbeta.sum()
+	import pylab as pl
+	pl.figure()
+	pl.subplot(1, 2, 1) 
+	pl.imshow(test_y[0, :].reshape(imL, imL))
+	pl.subplot(1, 2, 2)
+	pl.imshow(test_ypred[0, :].reshape(imL, imL))
+	pl.show()
