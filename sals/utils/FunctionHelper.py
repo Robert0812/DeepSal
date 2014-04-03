@@ -1,27 +1,30 @@
+import numpy as np 
 import theano.tensor as T
 from skimage.filter import threshold_otsu
 from sklearn.decomposition import PCA
+from sklearn.preprocessing import MinMaxScaler
 
 ''' preprocessing functions '''
 def normalize01(X):
-	''' zeros mean and unit standard deviation '''
-	X -= X.mean(axis=0)
-	X /= X.std(axis=0)
-	return X
-
+    ''' zeros mean and unit standard deviation '''
+    X -= X.mean(axis=0)
+    X /= X.std(axis=0)
+    X = np.tanh(X)
+    return X
+    
 def PCA_whitening(X_train, X_test, n_dim=None):
-	''' PCA whitening '''
-	if n_dim is None:
-		n_dim = X_train.shape[1]
-	print 'X_train:{}, X_test:{}'.format(X_train.shape, X_test.shape)
-	pca = PCA(n_components=n_dim, whiten=True)
-	pca.fit(X_train)
-	return [pca.transform(X_train), pca.transform(X_test)]
+    ''' PCA whitening '''
+    if n_dim is None:
+        n_dim = X_train.shape[1]
+    print 'X_train:{}, X_test:{}'.format(X_train.shape, X_test.shape)
+    pca = PCA(n_components=n_dim, whiten=True)
+    pca.fit(X_train)
+    return [pca.transform(X_train), pca.transform(X_test)]
 
 def flatten(X):
-	''' flatten data from axis 1 to end '''
-	n_X = X.shape[0]
-	return X.reshape((n_X, -1))
+    ''' flatten data from axis 1 to end '''
+    n_X = X.shape[0]
+    return X.reshape((n_X, -1))
 
 
 ''' activation functions '''
@@ -37,11 +40,11 @@ def rectifier(x):
 
 ''' cost functions '''
 def mean_cross_entropy(output, target):
-	return T.nnet.binary_crossentropy(output, target).sum(axis=1).mean()
+    return T.nnet.binary_crossentropy(output, target).sum(axis=1).mean()
 
 def mean_nneq_map(output, target):
-	thresh = threshold_otsu(output)
-	return T.neq(1.0*(output>thresh), target).sum(axis=1).mean()
+    thresh = threshold_otsu(output)
+    return T.neq(1.0*(output>thresh), target).sum(axis=1).mean()
 
 def mean_sqr(output, target):
     return ((output - target) ** 2).sum(axis=1).mean()

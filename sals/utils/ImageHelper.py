@@ -17,7 +17,6 @@ from numpy import amin, amax, ravel, asarray, cast, arange, \
      issubdtype, array
 
 from skimage.color import rgb2lab
-from sklearn.preprocessing import MinMaxScaler
 
 try:
     from PIL import Image, ImageFilter
@@ -483,11 +482,4 @@ def imnormalize(rgbimg, mean_luminance=50):
 
     labimg[:,:,0] -= mean_luminance
 
-    #h, w, c = labimg.shape
-    #labimg = labimg.reshape(h*w, c)
-
-    #scaler = MinMaxScaler(scale_range, copy=False)
-    #labimg = scaler.fit_transform(labimg)
-
-    #return labimg.reshape(h, w, c)
     return labimg 
