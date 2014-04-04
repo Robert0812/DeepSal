@@ -48,11 +48,13 @@ if __name__ == '__main__':
 	#ypred = fc2.output().reshape((bs, imL, imL))
 	ypred = fc3.output()
 
-	model = GeneralModel(input=x, output=ypred,
-				target=y, params=params_cmb, 
-				regularizers = 0,
+	model = GeneralModel(input=x, data = msra,
+				output=ypred, target=y, 
+				params=params_cmb, 
 				cost_func=mean_cross_entropy,
-				error_func=mean_sqr)
+				error_func=mean_sqr,
+				regularizers = 0,
+				batch_size=bs)
 
 	sgd = sgd_optimizer(data = msra,  
 					model = model,
@@ -60,24 +62,16 @@ if __name__ == '__main__':
 					learning_rate=0.001,
 					valid_loss_decay = 0.005,
 					learning_rate_decay=1,
-					n_epochs=1000)
+					momentum = 0,
+					n_epochs=300)
 	sgd.fit()
 
 	# evaluation and testing
-	train, valid, test = cpudata
-	test_x, test_y = test 
-
-	index = T.lscalar()
-	test_model = theano.function(inputs=[index,],
-		outputs = model.outputs(), 
-		givens = {
-			model.x : msra.test_x[index*bs:(index+1)*bs],
-			model.y : msra.test_y[index*bs:(index+1)*bs]
-		})
-
+	test_x = msra.test_x.get_value(borrow=True)
+	test_y = msra.test_y.get_value(borrow=True)
 	n_test = test_x.shape[0]
 	n_batches_test = n_test/bs
-	test_ypred = [test_model(i) for i in xrange(n_batches_test)]
+	test_ypred = [model.test(i)[-1] for i in xrange(n_batches_test)]
 	test_ypred = np.asarray(test_ypred).reshape(n_test, -1)
 
 	T = 20

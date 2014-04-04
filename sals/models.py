@@ -207,8 +207,8 @@ class ConvLayer(object):
 
 class GeneralModel(object):
 	''' a wapper for general model '''
-	def __init__(self, input, output, target, params,
-					cost_func, error_func, regularizers=0):
+	def __init__(self, input, data, output, target, params,
+					cost_func, error_func, regularizers=0, batch_size = 100):
 
 		self.x = input
 		self.ypred = output
@@ -218,6 +218,37 @@ class GeneralModel(object):
 		self.cost_func = cost_func
 		self.error_func = error_func
 
+		create_incs = lambda p: theano.shared(
+            np.zeros_like(p.get_value(borrow=True)), borrow=True)
+
+		self.incs = [create_incs(p) for p in self.params]
+
+		index = T.lscalar()
+		lr = T.fscalar()
+		momentum = T.fscalar()
+		self.train = theano.function(inputs=[index, lr, momentum], 
+			outputs=[self.costs(), self.errors(), self.outputs()], 
+			updates=self.updates(lr, momentum),
+			givens={
+				self.x: data.train_x[index*batch_size : (index+1)*batch_size],
+				self.y: data.train_y[index*batch_size : (index+1)*batch_size]
+			})
+
+		self.test = theano.function(inputs=[index,],
+			outputs = [self.errors(), self.outputs()], 
+			givens = {
+				self.x : data.test_x[index*batch_size:(index+1)*batch_size],
+				self.y : data.test_y[index*batch_size:(index+1)*batch_size]
+		})
+
+		self.valid = theano.function(inputs=[index,], 
+			outputs=self.errors(), 
+			givens={
+				self.x: data.valid_x[index*batch_size : (index+1)*batch_size],
+				self.y: data.valid_y[index*batch_size : (index+1)*batch_size]
+			})
+
+
 	def costs(self):
 
 		return self.cost_func(self.ypred, self.y) + self.regularizers
@@ -226,9 +257,13 @@ class GeneralModel(object):
 
 		return self.error_func(self.ypred, self.y)
 
-	def updates(self, lr):
+	def updates(self, lr, momentum):
 		gparams = T.grad(cost = self.costs(), wrt = self.params)
-		updates = [(self.params[p], self.params[p] - lr*gparams[p]) 
+
+		updates_incs = [(self.incs[p], momentum*self.incs[p] - lr*gparams[p]) 
+				for p in range(len(self.params))]
+
+		updates = [(self.params[p], self.params[p] + momentum*self.incs[p] - lr*gparams[p]) 
 			for p in range(len(self.params))]
 		return updates
 
@@ -244,6 +279,7 @@ class sgd_optimizer(object):
 		learning_rate=0.1,
 		valid_loss_decay = 1e-3,
 		learning_rate_decay=0.95,
+		momentum = 0.9,
 		n_epochs=200):
 
 		self.data = data 
@@ -257,33 +293,9 @@ class sgd_optimizer(object):
 		self.lr = learning_rate
 		self.lr_decay = learning_rate_decay
 		self.valid_loss_decay = valid_loss_decay
+		self.momentum = momentum
 
 	def fit(self):
-
-		index = T.lscalar()
-		lr = T.fscalar()
-
-		train_model = theano.function(inputs=[index, lr], 
-			outputs=[self.model.costs(), self.model.errors()], 
-			updates=self.model.updates(lr),
-			givens={
-				self.model.x: self.data.train_x[index*self.batch_size : (index+1)*self.batch_size],
-				self.model.y: self.data.train_y[index*self.batch_size : (index+1)*self.batch_size]
-			})
-
-		test_model = theano.function(inputs=[index,], 
-			outputs=self.model.errors(), 
-			givens={
-				self.model.x: self.data.test_x[index*self.batch_size : (index+1)*self.batch_size],
-				self.model.y: self.data.test_y[index*self.batch_size : (index+1)*self.batch_size]
-			})
-
-		valid_model = theano.function(inputs=[index,], 
-			outputs=self.model.errors(), 
-			givens={
-				self.model.x: self.data.valid_x[index*self.batch_size : (index+1)*self.batch_size],
-				self.model.y: self.data.valid_y[index*self.batch_size : (index+1)*self.batch_size]
-			})
 
 		print 'fitting ...'
 		n_batches_train = self.data.train_x.get_value(borrow=True).shape[0]/self.batch_size
@@ -298,14 +310,14 @@ class sgd_optimizer(object):
 			#print self.model.params[0].get_value().max()
 			for batch_index in range(n_batches_train):
 				t0 = time.clock()
-				[batch_avg_cost, batch_avg_error] = train_model(batch_index, self.lr)
+				batch_avg_cost, batch_avg_error, _ = self.model.train(batch_index, self.lr, self.momentum)
 				t1 = time.clock()
 				print '{0:d}.{1:02d}... cost: {2:.3f}, error: {3:.3f} ({4:.3f} sec)'.format(epoch,
 					batch_index, batch_avg_cost*100/2304, batch_avg_error*100/2304, t1-t0)
 
 			if epoch%1 == 0:
-				valid_losses = [valid_model(i) for i in range(n_batches_valid)]
-				test_losses = [test_model(i) for i in xrange(n_batches_test)]
+				valid_losses = [self.model.valid(i) for i in range(n_batches_valid)]
+				test_losses = [self.model.test(i)[0] for i in xrange(n_batches_test)]
 				decrease = (valid_loss_prev - np.mean(valid_losses))/valid_loss_prev
 				if batch_avg_error*100./2304 < 13:
 					self.lr *= self.lr_decay
