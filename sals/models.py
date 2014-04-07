@@ -334,7 +334,7 @@ class sgd_optimizer(object):
 						batch_index, batch_avg_cost*100/2304, batch_avg_error*100/2304, t1-t0)
 
 			valid_avg_loss = np.mean([self.model.valid(i) for i in range(n_batches_valid)])
-			test__avg_loss = np.mean([self.model.test(i)[0] for i in xrange(n_batches_test)])
+			test_avg_loss = np.mean([self.model.test(i)[0] for i in xrange(n_batches_test)])
 			
 			if valid_avg_loss/2304. < 10/100.:
 				decrease = (valid_loss_prev - valid_avg_loss)/valid_loss_prev
@@ -344,7 +344,7 @@ class sgd_optimizer(object):
 			print '==================Test Output==================='
 			print 'Update learning_rate {0:.6f}'.format(self.lr)
 			print 'validation error {0:.2f} %, testing error {1:.2f} %'.format(  
-				np.mean(valid_losses)*100./2304, np.mean(test_losses)*100./2304)
+				valid_avg_loss*100./2304, test_avg_loss*100./2304)
 			print '================================================'
 
 		end_time = time.clock()
