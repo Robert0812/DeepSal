@@ -5,6 +5,11 @@ from theano.tensor.signal.downsample import max_pool_2d
 from sals.utils.FunctionHelper import mean_nll, mean_nneq
 import time
 
+from theano.sandbox.cuda.basic_ops import gpu_contiguous
+from pylearn2.sandbox.cuda_convnet.filter_acts import FilterActs
+from pylearn2.sandbox.cuda_convnet.pool import MaxPool
+
+
 class LogisticRegression(object):
 	''' 
 		define the learning cost, evaluation error, and update 
@@ -180,16 +185,27 @@ class ConvLayer(object):
 
 	def output(self):
 		# convolution output
-		conv_out = T.nnet.conv.conv2d(
-					input=self.x, filters=self.W, 
-					filter_shape = self.filter_shape, 
-					image_shape=self.image_shape)
+		# conv_out = T.nnet.conv.conv2d(
+		# 			input=self.x, filters=self.W, 
+		# 			filter_shape = self.filter_shape, 
+		# 			image_shape=self.image_shape)
+		
+		input_shuffled = self.x.dimshuffle(1, 2, 3, 0) # bc01 to c01b
+		filters_shuffled = self.W.dimshuffle(1, 2, 3, 0) # bc01 to c01b
+		conv_op = FilterActs(stride=1, partial_sum=1)
+		contiguous_input = gpu_contiguous(input_shuffled)
+		contiguous_filters = gpu_contiguous(filters_shuffled)
+		conv_out_shuffled = conv_op(contiguous_input, contiguous_filters)
 
 		# max-pooling output
-		pooled_out = max_pool_2d(
-				input = conv_out,
-				ds = self.pool_shape,
-				ignore_border=True)
+		# pooled_out = max_pool_2d(
+		# 		input = conv_out,
+		# 		ds = self.pool_shape,
+		# 		ignore_border=True)
+
+		pool_op = MaxPool(ds=self.pool_shape[0], stride=self.pool_shape[0])
+		pooled_out_shuffled = pool_op(conv_out_shuffled)
+		pooled_out = pooled_out_shuffled.dimshuffle(3, 0, 1, 2) # c01b to bc01
 
 		y = pooled_out + self.b.dimshuffle('x', 0, 'x', 'x')
 
@@ -277,7 +293,7 @@ class sgd_optimizer(object):
 	'''
 	def __init__(self, data, model, batch_size=10, 
 		learning_rate=0.1,
-		valid_loss_decay = 1e-3,
+		valid_loss_delta = 1e-2,
 		learning_rate_decay=0.95,
 		momentum = 0.9,
 		n_epochs=200):
@@ -292,7 +308,7 @@ class sgd_optimizer(object):
 		self.model = model
 		self.lr = learning_rate
 		self.lr_decay = learning_rate_decay
-		self.valid_loss_decay = valid_loss_decay
+		self.valid_loss_delta = valid_loss_delta
 		self.momentum = momentum
 
 	def fit(self):
@@ -301,6 +317,7 @@ class sgd_optimizer(object):
 		n_batches_train = self.data.train_x.get_value(borrow=True).shape[0]/self.batch_size
 		n_batches_valid = self.data.valid_x.get_value(borrow=True).shape[0]/self.batch_size
 		n_batches_test = self.data.test_x.get_value(borrow=True).shape[0]/self.batch_size
+		index_show = np.floor(np.linspace(0, n_batches_train-1, 5))
 
 		start_time = time.clock()
 		epoch = 0
@@ -312,21 +329,23 @@ class sgd_optimizer(object):
 				t0 = time.clock()
 				batch_avg_cost, batch_avg_error, _ = self.model.train(batch_index, self.lr, self.momentum)
 				t1 = time.clock()
-				print '{0:d}.{1:02d}... cost: {2:.3f}, error: {3:.3f} ({4:.3f} sec)'.format(epoch,
-					batch_index, batch_avg_cost*100/2304, batch_avg_error*100/2304, t1-t0)
+				if batch_index in index_show:
+					print '{0:d}.{1:02d}... cost: {2:.3f}, error: {3:.3f} ({4:.3f} sec)'.format(epoch,
+						batch_index, batch_avg_cost*100/2304, batch_avg_error*100/2304, t1-t0)
 
-			if epoch%1 == 0:
-				valid_losses = [self.model.valid(i) for i in range(n_batches_valid)]
-				test_losses = [self.model.test(i)[0] for i in xrange(n_batches_test)]
-				decrease = (valid_loss_prev - np.mean(valid_losses))/valid_loss_prev
-				if batch_avg_error*100./2304 < 13:
+			valid_avg_loss = np.mean([self.model.valid(i) for i in range(n_batches_valid)])
+			test__avg_loss = np.mean([self.model.test(i)[0] for i in xrange(n_batches_test)])
+			
+			if valid_avg_loss/2304. < 10/100.:
+				decrease = (valid_loss_prev - valid_avg_loss)/valid_loss_prev
+				if decrease > self.valid_loss_delta:
 					self.lr *= self.lr_decay
-					valid_loss_prev = np.mean(valid_losses)
-				print '===================Test Output===================='
-				print 'Update learning_rate {0:.6f}'.format(self.lr)
-				print 'validation error {0:.2f} %, testing error {1:.2f} %'.format(  
-					np.mean(valid_losses)*100./2304, np.mean(test_losses)*100./2304)
-				print '=================================================='
+					valid_loss_prev = valid_avg_loss
+			print '==================Test Output==================='
+			print 'Update learning_rate {0:.6f}'.format(self.lr)
+			print 'validation error {0:.2f} %, testing error {1:.2f} %'.format(  
+				np.mean(valid_losses)*100./2304, np.mean(test_losses)*100./2304)
+			print '================================================'
 
 		end_time = time.clock()
 		print 'The code run for %d epochs, with %f epochs/sec' % (

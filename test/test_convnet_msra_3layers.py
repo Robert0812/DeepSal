@@ -59,11 +59,11 @@ if __name__ == '__main__':
 	sgd = sgd_optimizer(data = msra,  
 					model = model,
 					batch_size=bs, 
+					valid_loss_delta = 0.01,
 					learning_rate=0.001,
-					valid_loss_decay = 0.005,
-					learning_rate_decay=1,
+					learning_rate_decay=0.9,					
 					momentum = 0.5,
-					n_epochs=300)
+					n_epochs=1000)
 	sgd.fit()
 
 	# evaluation and testing

@@ -34,9 +34,8 @@ sigmoid = T.nnet.sigmoid
 
 softmax = T.nnet.softmax
 
-def rectifier(x):
+def relu(x):
     return x * (x > 0.0)
-
 
 ''' cost functions '''
 def mean_cross_entropy(output, target):
