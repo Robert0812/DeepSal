@@ -343,12 +343,10 @@ class sgd_optimizer(object):
 					valid_loss_prev = valid_avg_loss
 			print '==================Test Output==================='
 			print 'Update learning_rate {0:.6f}'.format(self.lr)
-			print 'validation error {0:.2f} %, testing error {1:.2f} %'.format(  
+			print 'validation error {0:.2f}%, testing error {1:.2f}%'.format(  
 				valid_avg_loss*100./2304, test_avg_loss*100./2304)
 			print '================================================'
 
 		end_time = time.clock()
 		print 'The code run for %d epochs, with %f epochs/sec' % (
         			epoch, 1. * epoch / (end_time - start_time))
-		#print 'Final model:'
-		#print self.model.W.get_value(), self.model.b.get_value() 
