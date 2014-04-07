@@ -63,7 +63,7 @@ if __name__ == '__main__':
 					learning_rate=0.001,
 					learning_rate_decay=0.9,					
 					momentum = 0,
-					n_epochs=1000)
+					n_epochs=-1)
 	sgd.fit()
 
 	# evaluation and testing
