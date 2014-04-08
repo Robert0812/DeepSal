@@ -10,7 +10,7 @@ import glob
 import ntpath
 import pylab as pl 
 
-from sals.utils.ImageHelper import imresize, imread, imnormalize
+from sals.utils.ImageHelper import imresize, imread, imnormalize, imcrop
 from sals.utils.FunctionHelper import normalize01, flatten
 
 class DataMan(object):
@@ -130,7 +130,38 @@ class DataMan_msra(DataMan):
 		self.train_x, self.train_y = self.shared_dataset(train_set)
 
 
-	def convert2pkl(self, pklfile, sz=(48, 48)):
+	def convert_data(self, imgs, msks):
+		imgs_norm = [im.transpose((2, 0, 1)) for im in imgs]
+		msks_norm = [(im>127)*1.0 for im in msks]
+		return imgs_norm, msks_norm
+
+
+	def preprocessing(self, imgs, msks, sz=(48, 48), augx=0):
+
+		if aug > 0:
+			# augx = 2xnSample+1
+			n_sample = np.int((augx-1.)/2.)
+			imH, imW = imgs[0].shape[0:2]
+			borderH = np.int(imH*0.2)
+			borderW = np.int(imW*0.2)
+			w = imW - borderW 
+			h = imH - borderH
+			x1s = np.random.randint(0, borderW, n_sample)
+			y1s = np.random.randint(0, borderH, n_sample)
+			imgs_crop = [imcrop(im, [x1, y1, w, h]) for im, x1, y1 in zip(imgs, x1s, y1s)]
+			msks_crop = [imcrop(im, [x1, y1, w, h]) for im, x1, y1 in zip(msks, x1s, y1s)]
+			imgs_flip = [pl.fliplr(im) for im in imgs_sub]
+			msks_flip = [pl.fliplr(im) for im in msks_sub]
+			imgs += imgs_crop + imgs_flip
+			msks += msks_crop + msks_flip 
+			
+		imgs_rs = [imresize(im, sz, interp='bicubic'), for im in imgs]
+		imgs_norm = [imnormalize(im) for im in imgs_rs]
+		msks_norm = [imresize(im, sz, interp='bicubic'), for im in msks]
+		return convert_data(imgs_norm, msks_norm)
+
+
+	def convert2pkl(self, pklfile):
 
 		if not os.path.isfile(pklfile):
 			dataset_dir = '/home/rzhao/Projects/deep-saliency/data/'
@@ -154,15 +185,17 @@ class DataMan_msra(DataMan):
 				tst_img.append(msra5000+'/'+ntpath.basename(single_image)[:-len('_smap.png')]+img_ext)	
 				tst_msk.append(msra5000+'/'+ntpath.basename(single_image)[:-len('_smap.png')]+msk_ext)
 
-			# read image and preprocessing
-			print 'preprocessing ...'
-			resize_func = lambda im: imresize(im, sz, interp='bicubic')
-			preproc_data = lambda im: imnormalize(resize_func(im)).transpose((2, 0, 1))
-			preproc_mask = lambda im: (resize_func(im)>127)*1.0
-			train_x = [preproc_data(imread(fname)) for fname in trn_img]
-			train_y = [preproc_mask(imread(fname)) for fname in trn_msk]
-			test_x = [preproc_data(imread(fname)) for fname in tst_img]
-			test_y = [preproc_mask(imread(fname)) for fname in tst_msk]
+			# read images
+			print 'reading ...'
+			train_img = [imread(fname) for fname in trn_img]
+			train_msk = [imread(fname) for fname in trn_msk]
+			test_img = [imread(fname) for fname in tst_img]
+			test_msk = [imread(fname) for fname in tst_msk]
+
+			# preprocessing
+			print 'preprocessing ...'			
+			train_x, train_y = preprocessing(train_img, train_msk, augx=10)
+			test_x, test_y = preproc_mask(test_img, test_msk, augx=0)
 
 			# shuffle training data
 			print 'shuffle data ...'

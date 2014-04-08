@@ -483,3 +483,14 @@ def imnormalize(rgbimg, mean_luminance=50):
     labimg[:,:,0] -= mean_luminance
 
     return labimg 
+
+def imcrop(img, rect):
+    '''
+    crop a sub windown from an image given [x, y, w, h]
+    '''
+    if img.ndim == 2:
+        return img[rect[1]:(rect[1]+rect[3]), rect[0]:(rect[0]+rect[2])]
+    elif img.ndim == 3:
+        return img[rect[1]:(rect[1]+rect[3]), rect[0]:(rect[0]+rect[2]), :]
+    else:
+        print 'image_crop error!'
