@@ -493,4 +493,5 @@ def imcrop(img, rect):
     elif img.ndim == 3:
         return img[rect[1]:(rect[1]+rect[3]), rect[0]:(rect[0]+rect[2]), :]
     else:
-        print 'image_crop error!'
+        raise ValueError("Unknown image type.")
+

@@ -65,7 +65,7 @@ class DataMan(object):
 		if savefile[-3:] == 'pkl':
 			f = open(savefile, 'wb')
 			print savefile, len(data)
-			cPickle.dump(data, f, -1) 
+			cPickle.dump(data, f, cPickle.HIGHEST_PROTOCOL) 
 			f.close()
 
 		elif savefile[-3:] == 'csv':
@@ -138,28 +138,36 @@ class DataMan_msra(DataMan):
 
 	def preprocessing(self, imgs, msks, sz=(48, 48), augx=0):
 
-		if aug > 0:
+		print len(imgs)
+		if augx > 0:
+			print 'augmenting train data ...'			
 			# augx = 2xnSample+1
-			n_sample = np.int((augx-1.)/2.)
+			n_sample = np.int(augx/2.)-1
 			imH, imW = imgs[0].shape[0:2]
 			borderH = np.int(imH*0.2)
-			borderW = np.int(imW*0.2)
+			borderW = np.int(imW*0.2) 
 			w = imW - borderW 
 			h = imH - borderH
 			x1s = np.random.randint(0, borderW, n_sample)
 			y1s = np.random.randint(0, borderH, n_sample)
-			imgs_crop = [imcrop(im, [x1, y1, w, h]) for im, x1, y1 in zip(imgs, x1s, y1s)]
-			msks_crop = [imcrop(im, [x1, y1, w, h]) for im, x1, y1 in zip(msks, x1s, y1s)]
-			imgs_flip = [pl.fliplr(im) for im in imgs_sub]
-			msks_flip = [pl.fliplr(im) for im in msks_sub]
-			imgs += imgs_crop + imgs_flip
-			msks += msks_crop + msks_flip 
+			imgs_crop = imgs
+			msks_crop = msks
+			for img, msk in zip(imgs, msks):
+				imgs_crop += [imcrop(img, [x1, y1, w, h]) for x1, y1 in zip(x1s, y1s)]
+				msks_crop += [imcrop(msk, [x1, y1, w, h]) for x1, y1 in zip(x1s, y1s)]
+			print len(imgs_crop)
+			imgs_flip = [pl.fliplr(im) for im in imgs_crop]
+			msks_flip = [pl.fliplr(im) for im in msks_crop]
+			imgs = imgs_crop + imgs_flip
+			msks = msks_crop + msks_flip 
+			print len(imgs)
 			
-		imgs_rs = [imresize(im, sz, interp='bicubic'), for im in imgs]
+		imgs_rs = [imresize(im, sz, interp='bicubic') for im in imgs]
 		imgs_norm = [imnormalize(im) for im in imgs_rs]
-		msks_norm = [imresize(im, sz, interp='bicubic'), for im in msks]
-		return convert_data(imgs_norm, msks_norm)
-
+		msks_norm = [imresize(im, sz, interp='bicubic') for im in msks]
+		imgs_final, msks_final = self.convert_data(imgs_norm, msks_norm)
+		print len(imgs_final)
+		return imgs_final, msks_final
 
 	def convert2pkl(self, pklfile):
 
@@ -170,6 +178,7 @@ class DataMan_msra(DataMan):
 			msra5000_test = dataset_dir + 'MSRA5000/MSRA-B-test'
 			img_ext = '.jpg'
 			msk_ext = '.png'
+			augX = 10
 
 			trn_img = []
 			trn_msk = []
@@ -194,8 +203,8 @@ class DataMan_msra(DataMan):
 
 			# preprocessing
 			print 'preprocessing ...'			
-			train_x, train_y = preprocessing(train_img, train_msk, augx=10)
-			test_x, test_y = preproc_mask(test_img, test_msk, augx=0)
+			train_x, train_y = self.preprocessing(train_img, train_msk, augx=augX)
+			test_x, test_y = self.preprocessing(test_img, test_msk, augx=0)
 
 			# shuffle training data
 			print 'shuffle data ...'
@@ -220,8 +229,11 @@ class DataMan_msra(DataMan):
 			test_x = normalize01(test_x)
 
 			# split into train and valid
-			train = [train_x[0:7000], train_y[0:7000]]
-			valid = [train_x[7000:], train_y[7000:]]
+			nValid = np.int(len(train_img)*0.1)*augX
+			train = [train_x[:-nValid], train_y[:-nValid]]
+			valid = [train_x[-nValid:], train_y[-nValid:]]
+			# train = [train_x[0:7000], train_y[0:7000]]
+			# valid = [train_x[7000:], train_y[7000:]]
 			test = [test_x, test_y]
 			data = [train, valid, test]
 			self.save(data, pklfile)

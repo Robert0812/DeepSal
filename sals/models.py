@@ -75,7 +75,8 @@ class FCLayer(object):
 	def __init__(self, n_in, n_out, input = None, 
 				W_init = None, b_init = None, actfun=None, tag='') :
 
-		print 'building model: Fully-connected layer' + tag 
+		print 'building model: Fully-connected layer{}, input:{}, output:{}'.format(
+			tag, (np.nan, n_in), (np.nan, n_out)) 
 		if input is not None:
 			self.x = input 
 		else:
@@ -141,7 +142,11 @@ class ConvLayer(object):
 			input = None, W_init = None, b_init = None, 
 			actfun=None, flatten = False, tag='') :
 
-		print 'building model: Convolutional layer' + tag 
+		outL = np.floor((image_shape[-1]-filter_shape[-1]+1.)/pool_shape[-1]).astype(np.int)
+		output_shape = (image_shape[0], filter_shape[0], outL, outL)
+		print 'building model: Convolutional layer{}, input:{}, output:{}'.format(
+			tag, image_shape, output_shape) 
+		
 		if input is not None:
 			self.x = input 
 		else:

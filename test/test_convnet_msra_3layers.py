@@ -10,11 +10,11 @@ import time
 
 if __name__ == '__main__':
 
-	msra = DataMan_msra('../data/msra_norm3.pkl')
+	msra = DataMan_msra('../data/msra_aug.pkl')
 	cpudata = msra.load()
 	msra.share2gpumem(cpudata)
 
-	bs = 200
+	bs = 1000
 	imL = 48
 	filterL = 5
 	recfield = 2
@@ -42,11 +42,12 @@ if __name__ == '__main__':
 			tag='_conv2')
 	
 	outL2 = np.floor((outL1-filterL2+1.)/recfield).astype(np.int)
-	fc3 = FCLayer(input=conv2.output(), n_in=nfilter2*outL2*outL2, n_out=imL*imL, actfun=sigmoid, tag='_fc3')
-	params_cmb = conv1.params + conv2.params + fc3.params 
+	fc3 = FCLayer(input=conv2.output(), n_in=nfilter2*outL2*outL2, n_out=imL*imL, tag='_fc3')
+	fc4 = FCLayer(input=fc3.output(), n_in=imL*imL, n_out=imL*imL, actfun=sigmoid, tag='_fc4')
+	params_cmb = conv1.params + conv2.params + fc3.params + fc4.params
 	#params_cmb = fc0.params + fc2.params
 	#ypred = fc2.output().reshape((bs, imL, imL))
-	ypred = fc3.output()
+	ypred = fc4.output()
 
 	model = GeneralModel(input=x, data = msra,
 				output=ypred, target=y, 
