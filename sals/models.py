@@ -327,6 +327,8 @@ class sgd_optimizer(object):
 		start_time = time.clock()
 		epoch = 0
 		valid_loss_prev = 2304
+		check_period = 10.
+		count = 0
 		while (epoch < self.n_epochs):
 			epoch += 1
 			#print self.model.params[0].get_value().max()
@@ -342,13 +344,17 @@ class sgd_optimizer(object):
 			test_avg_loss = np.mean([self.model.test(i)[0] for i in xrange(n_batches_test)])
 			
 			if valid_avg_loss/2304. < 10/100.:
-				decrease = (valid_loss_prev - valid_avg_loss)/valid_loss_prev
-				if decrease > self.valid_loss_delta:
+				# decrease = (valid_loss_prev - valid_avg_loss)/valid_loss_prev
+				# if decrease > self.valid_loss_delta:
+				count += 1
+				delta_loss = valid_loss_prev - valid_avg_loss
+				if count == check_period and delta_loss*100./2304. < 0.01/100.:
 					self.lr *= self.lr_decay
 					valid_loss_prev = valid_avg_loss
+					count = 0
 			print '==================Test Output==================='
-			print 'Update learning_rate {0:.6f}'.format(self.lr)
-			print 'validation error {0:.2f}%, testing error {1:.2f}%'.format(  
+			print 'Update learning_rate {0:.6f}'.format(self.lr) if count == 0 else 'no update'
+			print 'validation error {0:.3f}%, testing error {1:.3f}%'.format(  
 				valid_avg_loss*100./2304, test_avg_loss*100./2304)
 			print '================================================'
 
