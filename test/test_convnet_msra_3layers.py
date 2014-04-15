@@ -10,7 +10,7 @@ import time
 
 if __name__ == '__main__':
 
-	msra = DataMan_msra('../data/msra_norm3.pkl')
+	msra = DataMan_msra('../data/msra_aug.pkl')
 	cpudata = msra.load()
 	msra.share2gpumem(cpudata)
 
