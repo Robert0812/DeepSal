@@ -52,7 +52,7 @@ if __name__ == '__main__':
 	model = GeneralModel(input=x, data = msra,
 				output=ypred, target=y, 
 				params=params_cmb, 
-				cost_func=mean_cross_entropy,
+				cost_func=mean_nneq_map,
 				error_func=mean_sqr,
 				regularizers = 0,
 				batch_size=bs)

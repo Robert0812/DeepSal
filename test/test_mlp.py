@@ -1,7 +1,6 @@
 from sals.utils.DataHelper import DataMan_mnist
 from sals.utils.FunctionHelper import *
 from sals.models import sgd_optimizer
-from sals.models import FCLayer
 
 import numpy as np
 import theano 

@@ -348,7 +348,7 @@ class sgd_optimizer(object):
 				# if decrease > self.valid_loss_delta:
 				count += 1
 				delta_loss = valid_loss_prev - valid_avg_loss
-				if count == check_period and delta_loss*100./2304. < 0.01/100.:
+				if count == check_period and delta_loss/2304. < 0.01/100.:
 					self.lr *= self.lr_decay
 					valid_loss_prev = valid_avg_loss
 					count = 0
