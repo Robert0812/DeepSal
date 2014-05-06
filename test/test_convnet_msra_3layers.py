@@ -10,7 +10,7 @@ import time
 
 if __name__ == '__main__':
 
-	msra = DataMan_msra('../data/msra_aug.pkl')
+	msra = DataMan_msra('../data/msra_norm3.pkl')
 	cpudata = msra.load()
 	msra.share2gpumem(cpudata)
 
@@ -64,7 +64,7 @@ if __name__ == '__main__':
 					learning_rate=0.001,
 					learning_rate_decay=0.9,					
 					momentum = 0,
-					n_epochs=-1)
+					n_epochs=100)
 	sgd.fit()
 
 	# evaluation and testing

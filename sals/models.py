@@ -9,71 +9,19 @@ from theano.sandbox.cuda.basic_ops import gpu_contiguous
 from pylearn2.sandbox.cuda_convnet.filter_acts import FilterActs
 from pylearn2.sandbox.cuda_convnet.pool import MaxPool
 
-
-class LogisticRegression(object):
-	''' 
-		define the learning cost, evaluation error, and update 
-	'''
-
-	def __init__(self, n_in, n_out,
-	 			input=None, target=None, 
-				actfunc=T.nnet.softmax, 
-				costfunc=mean_nll, 
-				errorfunc=mean_nneq):
-
-		if input is not None:
-			self.x = input 
-		else:
-			self.x = T.matrix('x')
-
-		if target is not None:
-			self.y = target
-		else:
-			self.y = T.ivector('y')
-
-		self.actfunc = actfunc
-		self.costfunc = costfunc
-		self.errorfunc = errorfunc
-
-		self.W = theano.shared(value=np.zeros((n_in, n_out), 
-			dtype = theano.config.floatX), 
-			name= 'W', borrow=True)
-
-		self.b = theano.shared(value=np.zeros((n_out,), 
-			dtype = theano.config.floatX), 
-			name = 'b', borrow=True)
-
-		self.output = self.actfunc(T.dot(self.x, self.W) + self.b)
-
-		self.params = [self.W, self.b]
-
-	def costs(self):
-		return self.costfunc(self.output, self.y)
-	
-	def errors(self):
-
-		if self.y.dtype.startswith('int'):
-			return self.errorfunc(self.output, self.y)
-		else:
-			raise NotImplementedError()
-
-	def updates(self, learning_rate):
-		'''
-			return update rules
-		'''
-		g_W = T.grad(cost=self.costs(), wrt=self.W)
-		g_b = T.grad(cost=self.costs(), wrt=self.b)
-		update_w = (self.W, self.W - learning_rate * g_W)
-		update_b = (self.b, self.b - learning_rate * g_b)
-		updates = [update_w, update_b]
-		return updates
-
+''' implement of dropout from https://github.com/mdenil/dropout/ '''
+def drop_from_layer(rng, layer, p=0.5):
+    srng = T.shared_randomstreams.RandomStreams(rng.randint(123))
+    mask = srng.binomial(n=1, p=1-p, size=layer.shape)
+    output = layer*T.cast(mask, theano.config.floatX)
+    return output
 		
 class FCLayer(object):
 	''' Fully-connected layer'''
 
 	def __init__(self, n_in, n_out, input = None, 
-				W_init = None, b_init = None, actfun=None, tag='') :
+				W_init = None, b_init = None, 
+				actfun=None, dropoutFrac=0, tag='') :
 
 		print 'building model: Fully-connected layer{}, input:{}, output:{}'.format(
 			tag, (np.nan, n_in), (np.nan, n_out)) 

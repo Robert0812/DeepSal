@@ -57,7 +57,7 @@ def mean_nll(output, target):
 def mean_nneq(output, target):
     pred = T.argmax(output, axis=1)
     return T.neq(pred, target).mean()
-
+    
 
 ''' evaluation functions for saliency map '''
 
