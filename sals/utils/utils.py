@@ -47,7 +47,6 @@ def savefile(data, file = None):
 
 		if file[-3:] == 'pkl':
 			f = open(file, 'wb')
-			print file, len(data)
 			cPickle.dump(data, f, cPickle.HIGHEST_PROTOCOL) 
 			f.close()
 
