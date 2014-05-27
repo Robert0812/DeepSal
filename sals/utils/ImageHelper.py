@@ -17,6 +17,7 @@ from numpy import amin, amax, ravel, asarray, cast, arange, \
      issubdtype, array
 
 from skimage.color import rgb2lab
+from skimage.util.montage import montage2d
 
 try:
     from PIL import Image, ImageFilter
@@ -502,3 +503,37 @@ def imflatten(X):
     ''' flatten image data from axis 1 to end '''
     n_X = X.shape[0]
     return X.reshape((n_X, -1))
+
+
+def immontage(imgs, sz=None):
+    ''' Montage images '''
+    # input is required as a list of images
+    # assert isinstance(imgs, list)
+    
+    if sz is not None:
+        
+        size = sz 
+        if sz[1] < 0:
+            size = (sz[0], numpy.floor(len(imgs)*1.0/sz[0])+1)
+
+    else:
+        imh, imw = imgs[0].shape[:2]
+        mgh = numpy.int(numpy.sqrt(imw*len(imgs)/imh))
+        mgw = numpy.int(numpy.sqrt(imh*len(imgs)/imw))
+        if mgh*mgw < len(imgs):
+            mgw += 1
+        size = (mgh, mgw) 
+
+    if imgs[0].ndim is 2:
+        
+        return montage2d(arr_in=numpy.asarray(imgs), grid_shape=size)
+
+    else:
+
+        c1 = [im[:, :, 0] for im in imgs]
+        c2 = [im[:, :, 1] for im in imgs]
+        c3 = [im[:, :, 2] for im in imgs]
+        c1m = montage2d(arr_in=numpy.asarray(c1), grid_shape=size)
+        c2m = montage2d(arr_in=numpy.asarray(c2), grid_shape=size)
+        c3m = montage2d(arr_in=numpy.asarray(c3), grid_shape=size)
+        return numpy.dstack((c1m, c2m, c3m))
