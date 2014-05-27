@@ -21,11 +21,6 @@ def PCA_whitening(X_train, X_test, n_dim=None):
     pca.fit(X_train)
     return [pca.transform(X_train), pca.transform(X_test)]
 
-def flatten(X):
-    ''' flatten data from axis 1 to end '''
-    n_X = X.shape[0]
-    return X.reshape((n_X, -1))
-
 
 ''' activation functions '''
 tanh = T.tanh
@@ -38,6 +33,13 @@ def relu(x):
     return x * (x > 0.0)
 
 ''' cost functions '''
+
+def sqr_error(output, target):
+    return ((output - target) ** 2).mean()
+
+def cross_entropy(output, target):
+    return T.nnet.binary_crossentropy(output, target).mean()
+
 def mean_cross_entropy(output, target):
     return T.nnet.binary_crossentropy(output, target).sum(axis=1).mean()
 

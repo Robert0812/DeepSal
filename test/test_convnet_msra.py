@@ -10,7 +10,11 @@ import time
 
 if __name__ == '__main__':
 
-	msra = DataMan_msra('../data/msra_flatten.pkl')
+	file_msra = '../data/msra_flatten.pkl'
+	msra = DataMan_msra()
+	if not os.path.isfile(file_msra):
+		msra.convert2pkl(file_msra)
+
 	cpudata = msra.load()
 	msra.share2gpumem(cpudata)
 

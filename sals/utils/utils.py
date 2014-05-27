@@ -37,6 +37,29 @@ def loadfile(file=None):
 
 	return data
 
+def savefile(data, file = None):	
+		''' Save data to file '''
+
+		if file is None:
+			raise NameError('File not specified!')
+
+		print 'Saving file to {}'.format(file)
+
+		if file[-3:] == 'pkl':
+			f = open(file, 'wb')
+			print file, len(data)
+			cPickle.dump(data, f, cPickle.HIGHEST_PROTOCOL) 
+			f.close()
+
+		elif file[-3:] == 'csv':
+			with open(file, 'wb') as f:
+				w = csv.writer(f)
+				w.writerows(data)
+
+		elif file[-3:] == 'mat':
+			savemat(file, data)
+			
+
 def visualize_imfolder(folder_path=None):
 
 	if folder_path is None:

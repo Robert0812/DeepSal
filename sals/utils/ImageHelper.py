@@ -382,7 +382,8 @@ def imshow(arr):
     import os
     os.close(fnum)
 
-    cmd = os.environ.get('SCIPY_PIL_IMAGE_VIEWER','see')
+    #cmd = os.environ.get('SCIPY_PIL_IMAGE_VIEWER','see')
+    cmd = 'mirage'
     status = os.system("%s %s" % (cmd,fname))
 
     os.unlink(fname)
@@ -484,6 +485,7 @@ def imnormalize(rgbimg, mean_luminance=50):
 
     return labimg 
 
+
 def imcrop(img, rect):
     '''
     crop a sub windown from an image given [x, y, w, h]
@@ -495,3 +497,8 @@ def imcrop(img, rect):
     else:
         raise ValueError("Unknown image type.")
 
+
+def imflatten(X):
+    ''' flatten image data from axis 1 to end '''
+    n_X = X.shape[0]
+    return X.reshape((n_X, -1))

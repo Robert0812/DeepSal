@@ -1,17 +1,19 @@
 import gzip
 import cPickle
 import os 
+import sys
 import numpy as np 
 from scipy.io import loadmat, savemat
 import theano 
 import theano.tensor as T
 
-import glob 
+from glob import glob 
 import ntpath
 import pylab as pl 
 
-from sals.utils.ImageHelper import imresize, imread, imnormalize, imcrop
-from sals.utils.FunctionHelper import normalize01, flatten
+from sals.utils.ImageHelper import imnormalize, imcrop, imflatten, imread, imresize
+from sals.utils.FunctionHelper import normalize01
+from sals.utils.utils import *
 
 class DataMan(object):
 
@@ -22,11 +24,6 @@ class DataMan(object):
 				self._file = filepath 
 			else:
 				raise IOError('File not exist')
-
-
-	def _log(self, msg):
-		''' Print verbose information '''
-		print msg
 
 
 	def load(self):
@@ -57,24 +54,9 @@ class DataMan(object):
 		return data
 
 
-	def save(self, data, savefile):	
-		''' Save data to file '''
-
-		self._log('Saving file to {}'.format(savefile))
-
-		if savefile[-3:] == 'pkl':
-			f = open(savefile, 'wb')
-			print savefile, len(data)
-			cPickle.dump(data, f, cPickle.HIGHEST_PROTOCOL) 
-			f.close()
-
-		elif savefile[-3:] == 'csv':
-			with open(savefile, 'wb') as f:
-				w = csv.writer(f)
-				w.writerows(data)
-
-		elif savefile[-3:] == 'mat':
-			savemat(savefile, data)
+	def _log(self, msg):
+		''' Print verbose information '''
+		print msg
 
 
 class DataMan_mnist(DataMan):
@@ -101,6 +83,155 @@ class DataMan_mnist(DataMan):
 		self.test_x, self.test_y = self.shared_dataset(test_set)
 		self.valid_x, self.valid_y = self.shared_dataset(valid_set)
 		self.train_x, self.train_y = self.shared_dataset(train_set)
+
+
+class DataMan_viper(DataMan):
+
+	def __init__(self, filepath=None):
+		super(DataMan_viper, self).__init__(filepath)
+
+
+	def shared_dataset(self, data_xy):
+
+		data_x, data_y = data_xy
+
+		shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX), borrow=True)
+		shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX), borrow=True)
+		
+		return shared_x, shared_y
+
+
+	def share2gpumem(self, data):
+		''' share current data into GPU memory '''
+		print 'sharing data into GPU memory ...'
+		train_set, valid_set, test_set = data
+		self.test_x, self.test_y = self.shared_dataset(test_set)
+		self.valid_x, self.valid_y = self.shared_dataset(valid_set)
+		self.train_x, self.train_y = self.shared_dataset(train_set)
+
+
+	def load_images_salmaps(self, datapath=None, imgext='bmp'):
+
+		if datapath is None:
+			if sys.platform == 'darwin':
+				homedir = '/Users/rzhao/'
+			else:
+				homedir = '/home/rzhao/'
+
+			datapath = homedir + 'Dropbox/ongoing/reid_jrnl/salgt/data_viper/'
+
+		filepath = datapath + 'query/'
+		imgfiles = sorted(glob(filepath + '*.' + imgext))
+		imgs = [imread(im) for im in imgfiles]
+
+		salfilepath = datapath + 'labels.pkl'
+		data = loadfile(salfilepath)
+		segmsks, salmsks = data
+		
+		imgs = [imresize(im, size=(segmsks[0].shape), interp='bicubic') for im in imgs]
+
+		imgs_norm = [imnormalize(im) for im in imgs]
+		return imgs_norm, segmsks, salmsks
+
+
+	def convert_data(self, imgs):
+		imgs_norm = [im.transpose((2, 0, 1)) for im in imgs]
+		return imgs_norm
+
+
+	def sampling_patch(self, imgs, segmsks, salmsks, sz=(48,48), ns= 1000, augx=0):
+
+		h, w = segmsks[0].shape
+		l = np.int(sz[0]/2.)
+		xx = np.tile(np.asarray(range(w)), (h, 1)).flatten()
+		yy = np.tile(np.asarray(range(h)), (w, 1)).transpose().flatten()
+
+		imgs_crop = []
+		sals_crop = []
+		
+		for img, seg, sal in zip(imgs, segmsks, salmsks):
+			# generate random sampling entries
+			samplemsk = np.zeros(h*w)
+			randidx = np.random.permutation(h*w)
+			samplemsk[randidx[:ns]] = 1
+			samplemsk = samplemsk.reshape((h, w))
+
+			toplefts = []
+			for x, y in zip(xx, yy):
+				if x-l>=0 and x+l<w and y-l>=0 and y+l<h and seg[y, x] > 0 and samplemsk[y, x] > 0:
+					toplefts.append((np.int(x-l), np.int(y-l)))
+
+			# crop patches centering on these points
+			imgs_crop += [imcrop(img, np.hstack((pt, sz))) for pt in toplefts]
+			sals_crop += [np.mean(imcrop(sal, np.hstack((pt, sz)) )) for pt in toplefts]
+
+		# convert data to roll axis for training usage
+		imgs_norm = self.convert_data(imgs_crop)
+		# sals_norm = np.asarray(sals_crop)
+
+		return imgs_norm, sals_crop
+
+
+	def splitting_data(self, ntotal):
+	
+		randidx = np.random.permutation(ntotal)
+		train_num = np.int(0.9*ntotal)
+		train_idx = randidx[:train_num]
+		test_idx = randidx[train_num:]
+	
+		return train_idx, test_idx
+
+
+	def convert2pkl(self, pklfile):
+
+		if not os.path.isfile(pklfile):
+
+			# read images
+			print 'reading ...'
+			imgs, segmsks, salmsks = self.load_images_salmaps()
+			
+			# splitting training / testing data
+			train_idx, test_idx = self.splitting_data(len(imgs))
+
+			# preprocessing
+			print 'sampling patches from each image ...'
+			spf = lambda items, indices: map(lambda i: items[i], indices)
+			train_x, train_y = self.sampling_patch(spf(imgs, train_idx), spf(segmsks, train_idx), spf(salmsks, train_idx))
+			test_x, test_y = self.sampling_patch(spf(imgs, test_idx), spf(segmsks, test_idx), spf(salmsks, test_idx))
+
+			# shuffle training data
+			print 'shuffle data ...'
+			np.random.seed(123)
+			np.random.shuffle(train_x)
+			np.random.seed(123)
+			np.random.shuffle(train_y)
+
+			# flattern and dtype conversion
+			print 'flatten data ...'
+			train_x = np.asarray(train_x, dtype=np.float32)
+			train_y = np.asarray(train_y, dtype=np.float32)
+			test_x = np.asarray(test_x, dtype=np.float32)
+			test_y = np.asarray(test_y, dtype=np.float32)
+			train_x = imflatten(train_x)
+			# train_y = flatten(train_y)
+			test_x = imflatten(test_x)
+			# test_y = flatten(test_y)
+
+			# normalize data to have zero mean and unit std
+			train_x = normalize01(train_x)
+			test_x = normalize01(test_x)
+
+			# split into train and valid
+			nValid = np.int(len(train_x)*0.1)
+			train = [train_x[:-nValid], train_y[:-nValid]]
+			valid = [train_x[-nValid:], train_y[-nValid:]]
+			
+			test = [test_x, test_y]
+			data = [train, valid, test]
+			savefile(data, pklfile)
+
+		else:
+			print 'History pickle file exists!'
 
 
 class DataMan_msra(DataMan):
@@ -182,15 +313,15 @@ class DataMan_msra(DataMan):
 
 			trn_img = []
 			trn_msk = []
-			for single_image in sorted(glob.glob(thus10000+'/*'+img_ext)):
-				rsb = glob.glob(msra5000_test+'/*_'+ntpath.basename(single_image)[:-4]+'_smap'+msk_ext)
+			for single_image in sorted(glob(thus10000+'/*'+img_ext)):
+				rsb = glob(msra5000_test+'/*_'+ntpath.basename(single_image)[:-4]+'_smap'+msk_ext)
 				if len(rsb) == 0:
 					trn_img.append(single_image)
 					trn_msk.append(single_image[:-4]+msk_ext)
 
 			tst_img = []
 			tst_msk = []
-			for single_image in sorted(glob.glob(msra5000_test+'/*'+msk_ext)):
+			for single_image in sorted(glob(msra5000_test+'/*'+msk_ext)):
 				tst_img.append(msra5000+'/'+ntpath.basename(single_image)[:-len('_smap.png')]+img_ext)	
 				tst_msk.append(msra5000+'/'+ntpath.basename(single_image)[:-len('_smap.png')]+msk_ext)
 
@@ -219,10 +350,10 @@ class DataMan_msra(DataMan):
 			train_y = np.asarray(train_y, dtype=np.float32)
 			test_x = np.asarray(test_x, dtype=np.float32)
 			test_y = np.asarray(test_y, dtype=np.float32)
-			train_x = flatten(train_x)
-			train_y = flatten(train_y)
-			test_x = flatten(test_x)
-			test_y = flatten(test_y)
+			train_x = imflatten(train_x)
+			train_y = imflatten(train_y)
+			test_x = imflatten(test_x)
+			test_y = imflatten(test_y)
 
 			# normalize data to have zero mean and unit std
 			train_x = normalize01(train_x)
