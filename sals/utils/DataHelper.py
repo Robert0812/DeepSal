@@ -237,8 +237,7 @@ class DataMan_viper(DataMan):
 class DataMan_msra(DataMan):
 
 	def __init__(self, filepath=None):
-		super(DataMan_msra, self).__init__(filepath)
-
+		super(DataMan_msra, self).__init__(filepath)	
 
 	def shared_dataset(self, data_xy):
 

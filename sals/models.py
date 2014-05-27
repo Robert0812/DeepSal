@@ -9,6 +9,8 @@ from theano.sandbox.cuda.basic_ops import gpu_contiguous
 from pylearn2.sandbox.cuda_convnet.filter_acts import FilterActs
 from pylearn2.sandbox.cuda_convnet.pool import MaxPool
 
+from theano.tensor.shared_randomstreams import RandomStreams
+
 ''' implement of dropout from https://github.com/mdenil/dropout/ '''
 def drop_from_layer(rng, layer, p=0.5):
     srng = T.shared_randomstreams.RandomStreams(rng.randint(123))
@@ -276,6 +278,7 @@ class GeneralModel(object):
 		self.regularizers = regularizers
 		self.cost_func = cost_func
 		self.error_func = error_func
+		self.batch_size = batch_size	
 
 		create_incs = lambda p: theano.shared(
             np.zeros_like(p.get_value(borrow=True)), borrow=True)
@@ -284,14 +287,26 @@ class GeneralModel(object):
 
 		index = T.lscalar()
 		lr = T.fscalar()
+		indices = T.lvector()
 		momentum = T.fscalar()
-		self.train = theano.function(inputs=[index, lr, momentum], 
+		
+		n_train = data.train_x.get_value(borrow=True).shape[0]
+
+		self.train = theano.function(inputs=[indices, lr, momentum], 
 			outputs=[self.costs(), self.errors(), self.outputs()], 
 			updates=self.updates(lr, momentum),
 			givens={
-				self.x: data.train_x[index*batch_size : (index+1)*batch_size],
-				self.y: data.train_y[index*batch_size : (index+1)*batch_size]
+				self.x: data.train_x[indices],
+				self.y: data.train_y[indices]
 			})
+
+		# self.train = theano.function(inputs=[index, lr, momentum], 
+		# 	outputs=[self.costs(), self.errors(), self.outputs()], 
+		# 	updates=self.updates(lr, momentum),
+		# 	givens={
+		# 		self.x: data.train_x[index*batch_size : (index+1)*batch_size],
+		# 		self.y: data.train_y[index*batch_size : (index+1)*batch_size]
+		# 	})
 
 		self.test = theano.function(inputs=[index,],
 			outputs = [self.errors(), self.outputs()], 
@@ -306,7 +321,6 @@ class GeneralModel(object):
 				self.x: data.valid_x[index*batch_size : (index+1)*batch_size],
 				self.y: data.valid_y[index*batch_size : (index+1)*batch_size]
 			})
-
 
 	def costs(self):
 
@@ -372,7 +386,7 @@ class sgd_optimizer(object):
 			#print self.model.params[0].get_value().max()
 			for batch_index in range(n_batches_train):
 				t0 = time.clock()
-				batch_avg_cost, batch_avg_error, _ = self.model.train(batch_index, self.lr, self.momentum)
+				batch_avg_cost, batch_avg_error, _ = self.model.train(batch_index, epoch, self.lr, self.momentum)
 				t1 = time.clock()
 				if batch_index in index_show:
 					print '{0:d}.{1:02d}... cost: {2:.3f}, error: {3:.3f} ({4:.3f} sec)'.format(epoch,
@@ -403,6 +417,7 @@ class sgd_optimizer(object):
 	def fit_viper(self):
 
 		print 'fitting ...'
+		n_train = self.data.train_x.get_value(borrow=True).shape[0]
 		n_batches_train = np.int(self.data.train_x.get_value(borrow=True).shape[0]/(self.batch_size*1.0))
 		n_batches_valid = np.int(self.data.valid_x.get_value(borrow=True).shape[0]/(self.batch_size*1.0))
 		n_batches_test = np.int(self.data.test_x.get_value(borrow=True).shape[0]/(self.batch_size*1.0))
@@ -415,11 +430,18 @@ class sgd_optimizer(object):
 		count = 0
 		while (epoch < self.n_epochs):
 			epoch += 1
-			#print self.model.params[0].get_value().max()
+			# generate a random set of batch indices
+			np.random.seed(epoch)
+			randidx = np.random.permutation(n_train)
+
 			for batch_index in range(n_batches_train):
+
+				this_batch_indices = randidx[batch_index*self.batch_size : (batch_index+1)*self.batch_size]
+
 				t0 = time.clock()
-				batch_avg_cost, batch_avg_error, _ = self.model.train(batch_index, self.lr, self.momentum)
+				batch_avg_cost, batch_avg_error, _ = self.model.train(this_batch_indices, self.lr, self.momentum)
 				t1 = time.clock()
+
 				if batch_index in index_show:
 					print '{0:d}.{1:02d}... cost: {2:.6f}, error: {3:.6f} ({4:.3f} sec)'.format(epoch,
 						batch_index, float(batch_avg_cost), float(batch_avg_error), float(t1-t0))
