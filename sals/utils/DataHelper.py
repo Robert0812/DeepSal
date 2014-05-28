@@ -87,30 +87,17 @@ class DataMan_mnist(DataMan):
 
 class DataMan_viper(DataMan):
 
-	def __init__(self, filepath=None):
-		super(DataMan_viper, self).__init__(filepath)
+	def __init__(self):
+		''' initialization and parameter settings '''
 
+		super(DataMan_viper, self).__init__()
+		self.patL = 48
+		self.step = 12
 
-	def shared_dataset(self, data_xy):
+		self.make_data()
 
-		data_x, data_y = data_xy
-
-		shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX), borrow=True)
-		shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX), borrow=True)
-		
-		return shared_x, shared_y
-
-
-	def share2gpumem(self, data):
-		''' share current data into GPU memory '''
-		print 'sharing data into GPU memory ...'
-		train_set, valid_set, test_set = data
-		self.test_x, self.test_y = self.shared_dataset(test_set)
-		self.valid_x, self.valid_y = self.shared_dataset(valid_set)
-		self.train_x, self.train_y = self.shared_dataset(train_set)
-
-
-	def load_images_salmaps(self, datapath=None, imgext='bmp'):
+	def _load_images_salmaps(self, datapath=None, imgext='bmp'):
+		''' load preliminary data (images, segmentations, and salience maps) '''
 
 		if datapath is None:
 			if sys.platform == 'darwin':
@@ -130,50 +117,16 @@ class DataMan_viper(DataMan):
 		
 		imgs = [imresize(im, size=(segmsks[0].shape), interp='bicubic') for im in imgs]
 
-		imgs_norm = [imnormalize(im) for im in imgs]
-		return imgs_norm, segmsks, salmsks
+		# imgs_norm = [imnormalize(im) for im in imgs]
+		# return imgs, segmsks, salmsks
+		self.imgs = imgs 
+		self.segmsks = segmsks
+		self.salmsks = salmsks
 
 
-	def convert_data(self, imgs):
-		imgs_norm = [im.transpose((2, 0, 1)) for im in imgs]
-		return imgs_norm
+	def _splitting_data(self, ntotal):
+		''' generate randomly splitted training / testing data indices ''' 
 
-
-	def sampling_patch(self, imgs, segmsks, salmsks, sz=(48,48), ns= 1000, augx=0):
-
-		h, w = segmsks[0].shape
-		l = np.int(sz[0]/2.)
-		xx = np.tile(np.asarray(range(w)), (h, 1)).flatten()
-		yy = np.tile(np.asarray(range(h)), (w, 1)).transpose().flatten()
-
-		imgs_crop = []
-		sals_crop = []
-		
-		for img, seg, sal in zip(imgs, segmsks, salmsks):
-			# generate random sampling entries
-			samplemsk = np.zeros(h*w)
-			randidx = np.random.permutation(h*w)
-			samplemsk[randidx[:ns]] = 1
-			samplemsk = samplemsk.reshape((h, w))
-
-			toplefts = []
-			for x, y in zip(xx, yy):
-				if x-l>=0 and x+l<w and y-l>=0 and y+l<h and seg[y, x] > 0 and samplemsk[y, x] > 0:
-					toplefts.append((np.int(x-l), np.int(y-l)))
-
-			# crop patches centering on these points
-			imgs_crop += [imcrop(img, np.hstack((pt, sz))) for pt in toplefts]
-			sals_crop += [np.mean(imcrop(sal, np.hstack((pt, sz)) )) for pt in toplefts]
-
-		# convert data to roll axis for training usage
-		imgs_norm = self.convert_data(imgs_crop)
-		# sals_norm = np.asarray(sals_crop)
-
-		return imgs_norm, sals_crop
-
-
-	def splitting_data(self, ntotal):
-	
 		randidx = np.random.permutation(ntotal)
 		train_num = np.int(0.9*ntotal)
 		train_idx = randidx[:train_num]
@@ -182,57 +135,124 @@ class DataMan_viper(DataMan):
 		return train_idx, test_idx
 
 
-	def convert2pkl(self, pklfile):
+	def _gen_grids(self):
+		''' generate a grid of points for sampling '''
+		
+		h, w = self.segmsks[0].shape
+		_x = np.arange(0, w, self.step)
+		_y = np.arange(0, h, self.step)
+		self.xx = np.tile(_x, (len(_y), 1)).flatten()
+		self.yy = np.tile(_y, (len(_x), 1)).transpose().flatten()
 
-		if not os.path.isfile(pklfile):
 
-			# read images
-			print 'reading ...'
-			imgs, segmsks, salmsks = self.load_images_salmaps()
+	def _sampling_patch(self, spidx, augx=0):
+		''' sampling local patches for predicting salience score '''
+
+		spf = lambda items, indices: map(lambda i: items[i], indices)
+		imgs 		=  spf(self.imgs, spidx)
+		segmsks 	=  spf(self.segmsks, spidx)
+		salmsks 	=  spf(self.salmsks, spidx)
+
+		h, w = self.segmsks[0].shape
+		# l = np.int(self.patL/2.)
+		# sz = (self.patL, self.patL)
+		l = self.patL
+		r = np.int(l/2)
+
+		imgids = [] 		# image indices
+		ctrids = []			# center grid indices
+		patches = [] 		# cropped patches
+		salscores = [] 		# corresponding salience scores
+
+		for idx, img, seg, sal in zip(spidx, imgs, segmsks, salmsks):
 			
-			# splitting training / testing data
-			train_idx, test_idx = self.splitting_data(len(imgs))
+			print idx
+			ids1 = []
+			ids2 = []
+			for i in range(len(self.xx)):
+				x = self.xx[i]
+				y = self.yy[i]
+				if x-r>=0 and x+r<w and y-r>=0 and y+r<h and seg[y, x] > 0 :
+					ids1.append(idx)
+					ids2.append(i)				
 
-			# preprocessing
-			print 'sampling patches from each image ...'
-			spf = lambda items, indices: map(lambda i: items[i], indices)
-			train_x, train_y = self.sampling_patch(spf(imgs, train_idx), spf(segmsks, train_idx), spf(salmsks, train_idx))
-			test_x, test_y = self.sampling_patch(spf(imgs, test_idx), spf(segmsks, test_idx), spf(salmsks, test_idx))
+			# crop patches centering on these points
+			imgids += ids1
+			ctrids += ids2
+			patches += [imcrop(img, [self.xx[k]-r, self.yy[k]-r, l, l]) for k in ids2]
+			salscores += [np.mean(imcrop(sal, [self.xx[k]-r, self.yy[k]-r, l, l])) for k in ids2]
 
-			# shuffle training data
-			print 'shuffle data ...'
-			np.random.seed(123)
-			np.random.shuffle(train_x)
-			np.random.seed(123)
-			np.random.shuffle(train_y)
+		# convert image to data format (normalize & roll axis) that is appropriate for training usage
+		patches_norm = self._convert_data(patches)
+		salscores = np.asarray(salscores)
+		imgids = np.asarray(imgids)
+		ctrids = np.asarray(ctrids)
 
-			# flattern and dtype conversion
-			print 'flatten data ...'
-			train_x = np.asarray(train_x, dtype=np.float32)
-			train_y = np.asarray(train_y, dtype=np.float32)
-			test_x = np.asarray(test_x, dtype=np.float32)
-			test_y = np.asarray(test_y, dtype=np.float32)
-			train_x = imflatten(train_x)
-			# train_y = flatten(train_y)
-			test_x = imflatten(test_x)
-			# test_y = flatten(test_y)
+		return imgids, ctrids, patches, patches_norm, salscores 
 
-			# normalize data to have zero mean and unit std
-			train_x = normalize01(train_x)
-			test_x = normalize01(test_x)
 
-			# split into train and valid
-			nValid = np.int(len(train_x)*0.1)
-			train = [train_x[:-nValid], train_y[:-nValid]]
-			valid = [train_x[-nValid:], train_y[-nValid:]]
-			
-			test = [test_x, test_y]
-			data = [train, valid, test]
-			savefile(data, pklfile)
+	def _convert_data(self, imgs):
+		''' this contains operations on images that make image become input data (cannot be shown) '''
+		
+		# convert from RGB to CIE-LAB color space
+		imgs_lab = [imnormalize(im) for im in imgs]
+		# roll axis to put channel axis to the first
+		imgs_cvt = [im.transpose((2, 0, 1)) for im in imgs_lab]
+		# flatten images
+		imgs_arr = np.asarray(imgs_cvt)
+		imgs_flatten = imflatten(imgs_arr)
+		# normalize to be zero mean and unit std
+		imgs_norm = normalize01(imgs_flatten)
 
-		else:
-			print 'History pickle file exists!'
+		return imgs_norm
 
+
+	def _shared_dataset(self, data_xy):
+
+		data_x, data_y = data_xy
+
+		shared_x = theano.shared(np.asarray(data_x, dtype=theano.config.floatX), borrow=True)
+		shared_y = theano.shared(np.asarray(data_y, dtype=theano.config.floatX), borrow=True)
+		
+		return shared_x, shared_y
+
+
+	def _share2gpumem(self, data):
+		''' share current data into GPU memory '''
+
+		print 'sharing data into GPU memory ...'
+		train_set, valid_set, test_set = data
+		self.test_x, self.test_y = self._shared_dataset(test_set)
+		self.valid_x, self.valid_y = self._shared_dataset(valid_set)
+		self.train_x, self.train_y = self._shared_dataset(train_set)
+
+
+	def make_data(self):
+		''' make dataset for training '''
+
+		# read images
+		print 'reading ...'
+		self._load_images_salmaps()
+		
+		# splitting training / testing data
+		train_idx, test_idx = self._splitting_data(len(self.imgs))
+
+		# preprocessing
+		print 'sampling patches from each image ...'
+		self._gen_grids()
+		self.train_imgids, self.train_ctrids, self.train_ims, train_x, train_y = self._sampling_patch(train_idx)
+		self.test_imgids, self.test_ctrids, self.test_ims, test_x, test_y = self._sampling_patch(test_idx)
+
+		# split into train and valid
+		nValid = np.int(len(train_x)*0.1)
+		train = [train_x[:-nValid], train_y[:-nValid]]
+		valid = [train_x[-nValid:], train_y[-nValid:]]
+		
+		test = [test_x, test_y]
+		data = [train, valid, test]
+		self._share2gpumem(data)
+
+	
 
 class DataMan_msra(DataMan):
 

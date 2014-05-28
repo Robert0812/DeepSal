@@ -522,6 +522,7 @@ def immontage(imgs, sz=None):
         mgw = numpy.int(numpy.sqrt(imh*len(imgs)/imw))
         if mgh*mgw < len(imgs):
             mgw += 1
+            mgh += 1
         size = (mgh, mgw) 
 
     if imgs[0].ndim is 2:

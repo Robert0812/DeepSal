@@ -421,13 +421,14 @@ class sgd_optimizer(object):
 		n_batches_train = np.int(self.data.train_x.get_value(borrow=True).shape[0]/(self.batch_size*1.0))
 		n_batches_valid = np.int(self.data.valid_x.get_value(borrow=True).shape[0]/(self.batch_size*1.0))
 		n_batches_test = np.int(self.data.test_x.get_value(borrow=True).shape[0]/(self.batch_size*1.0))
-		index_show = np.floor(np.linspace(0, n_batches_train-1, 5))
+		index_show = np.floor(np.linspace(0, n_batches_train-1, 10))
 
 		start_time = time.clock()
 		epoch = 0
 		valid_loss_prev = 0.5
 		check_period = 10.
 		count = 0
+		train_error = np.zeros(n_batches_train)
 		while (epoch < self.n_epochs):
 			epoch += 1
 			# generate a random set of batch indices
@@ -442,10 +443,13 @@ class sgd_optimizer(object):
 				batch_avg_cost, batch_avg_error, _ = self.model.train(this_batch_indices, self.lr, self.momentum)
 				t1 = time.clock()
 
-				if batch_index in index_show:
-					print '{0:d}.{1:02d}... cost: {2:.6f}, error: {3:.6f} ({4:.3f} sec)'.format(epoch,
-						batch_index, float(batch_avg_cost), float(batch_avg_error), float(t1-t0))
+				train_error[batch_index] = batch_avg_error
 
+				if batch_index in index_show:
+					print '({0:d}.{1:d}): {2:03d}.{3:03d}... cost: {4:.6f}, error: {5:.6f} ({6:.3f} sec)'.format(self.n_epochs, n_batches_train,
+						epoch, batch_index+1, float(batch_avg_cost), float(batch_avg_error), float(t1-t0))
+
+			train_avg_loss = train_error.mean()
 			valid_avg_loss = np.mean([self.model.valid(i) for i in range(n_batches_valid)])
 			test_avg_loss = np.mean([self.model.test(i)[0] for i in range(n_batches_test)])
 			
@@ -463,11 +467,11 @@ class sgd_optimizer(object):
 					self.lr *= self.lr_decay
 					count = 0
 
-			print '==================Test Output==================='
+			print '===========================Test Output==========================='
 			print 'Update learning_rate {0:.6f}'.format(self.lr) if count == 0 else 'no update'
-			print 'validation error {0:.6f}, testing error {1:.6f}'.format(  
-				valid_avg_loss, test_avg_loss)
-			print '================================================'
+			print 'train set error {0:.6f}, valid set error {1:.6f}'.format(train_avg_loss, valid_avg_loss)
+			print 'test set error {0:.6f}'.format(test_avg_loss)
+			print '================================================================='
 
 		end_time = time.clock()
 		print 'The code run for %d epochs, with %f epochs/sec' % (

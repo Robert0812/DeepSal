@@ -34,6 +34,9 @@ def relu(x):
 
 ''' cost functions '''
 
+def abs_error(output, target):
+    return abs(output - target).mean()
+
 def sqr_error(output, target):
     return ((output - target) ** 2).mean()
 
