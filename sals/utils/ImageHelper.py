@@ -478,6 +478,7 @@ def imfilter(arr,ftype):
 
 def imnormalize(rgbimg, mean_luminance=50):
     ''' convert image to lab color space, and normalize each channel to be [0, 1] range '''
+    
     labimg = rgb2lab(rgbimg)
 
     #mean_luminance = numpy.mean(labimg[:,:,0])
@@ -506,7 +507,7 @@ def imflatten(X):
 
 
 def immontage(imgs, sz=None):
-    ''' Montage images '''
+    ''' Montage color images '''
     # input is required as a list of images
     # assert isinstance(imgs, list)
     

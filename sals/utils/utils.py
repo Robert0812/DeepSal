@@ -6,6 +6,7 @@ import webbrowser
 import gzip
 import cPickle
 from scipy.io import loadmat, savemat
+from sals.utils.ImageHelper import imread, imsave
 
 def loadfile(file=None):
 	''' Load data from file with different format '''
@@ -32,12 +33,15 @@ def loadfile(file=None):
 	elif file[-3:] == 'mat':
 		data = loadmat(file)
 
+	elif file[-3:] in {'jpg', 'png', 'bmp'}:
+		data = imread(file)
+
 	else:
 		raise NameError('File format not recognized')
 
 	return data
 
-def savefile(data, file = None):	
+def savefile(file, data):	
 		''' Save data to file '''
 
 		if file is None:
@@ -57,8 +61,15 @@ def savefile(data, file = None):
 
 		elif file[-3:] == 'mat':
 			a = {}
-			a[os.path.splitext(file)[0]] = data
-			savemat(file, a)
+			filename = os.path.basename(file)
+			fieldname = os.path.splitext(filename)[0]
+			savemat(file, mdict={fieldname: data[0]})
+
+		elif file[-3:] in {'jpg', 'png', 'bmp'}:
+			imsave(file, data)
+
+		else:
+			raise NameError('File format not supported')
 			
 
 def visualize_imfolder(folder_path=None):
