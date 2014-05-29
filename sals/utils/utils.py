@@ -5,7 +5,7 @@ from glob import glob
 import webbrowser
 import gzip
 import cPickle
-from scipy.io import loadmat
+from scipy.io import loadmat, savemat
 
 def loadfile(file=None):
 	''' Load data from file with different format '''
@@ -56,7 +56,9 @@ def savefile(data, file = None):
 				w.writerows(data)
 
 		elif file[-3:] == 'mat':
-			savemat(file, data)
+			a = {}
+			a[os.path.splitext(file)[0]] = data
+			savemat(file, a)
 			
 
 def visualize_imfolder(folder_path=None):
