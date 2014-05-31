@@ -119,3 +119,17 @@ def get_fbeta(true_mask, esti_mask, beta2 = 0.3):
     fscore = (1 + beta2) * (p * r) / (
         beta2 * p + r)
     return fscore
+
+def get_roc_curve(true_masks, esti_maps, sample_times=100):
+    ''' compute the average ROC curve 
+    for a list of predictions given groundtruth masks '''
+
+    recall      = np.zeros(sample_times)
+    precision   = np.zeros(sample_times)
+    _max_value = true_masks[0].max()
+    for i, thr in zip(range(sample_times), np.linspace(0, _max_value, sample_times)):
+        
+        rocs = [get_roc(gt, msk>=thr) for gt, msk in zip(true_masks, esti_maps)]
+        recall[i], precision[i] = np.asarray(rocs).mean(axis=0)
+
+    return recall, precision

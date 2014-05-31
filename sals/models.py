@@ -287,18 +287,42 @@ class GeneralModel(object):
 
 		index = T.lscalar()
 		lr = T.fscalar()
-		indices = T.lvector()
+		# indices = T.lvector()
 		momentum = T.fscalar()
+		batch_data = T.fmatrix()
+		batch_label = T.fvector()
 		
 		n_train = data.train_x.get_value(borrow=True).shape[0]
 
-		self.train = theano.function(inputs=[indices, lr, momentum], 
+		self.train = theano.function(inputs=[batch_data, batch_label, lr, momentum], 
 			outputs=[self.costs(), self.errors(), self.outputs()], 
 			updates=self.updates(lr, momentum),
 			givens={
-				self.x: data.train_x[indices],
-				self.y: data.train_y[indices]
+				self.x: batch_data,
+				self.y: batch_label
 			})
+
+		self.test = theano.function(inputs=[batch_data, batch_label],
+			outputs = [self.errors(), self.outputs()], 
+			givens = {
+				self.x : batch_data,
+				self.y : batch_label
+		})
+
+		self.valid = theano.function(inputs=[batch_data, batch_label], 
+			outputs=self.errors(), 
+			givens={
+				self.x: batch_data, 
+				self.y: batch_label
+			})
+
+		# self.train = theano.function(inputs=[indices, lr, momentum], 
+		# 	outputs=[self.costs(), self.errors(), self.outputs()], 
+		# 	updates=self.updates(lr, momentum),
+		# 	givens={
+		# 		self.x: data.train_x[indices],
+		# 		self.y: data.train_y[indices]
+		# 	})
 
 		# self.train = theano.function(inputs=[index, lr, momentum], 
 		# 	outputs=[self.costs(), self.errors(), self.outputs()], 
@@ -308,19 +332,19 @@ class GeneralModel(object):
 		# 		self.y: data.train_y[index*batch_size : (index+1)*batch_size]
 		# 	})
 
-		self.test = theano.function(inputs=[index,],
-			outputs = [self.errors(), self.outputs()], 
-			givens = {
-				self.x : data.test_x[index*batch_size:(index+1)*batch_size],
-				self.y : data.test_y[index*batch_size:(index+1)*batch_size]
-		})
+		# self.test = theano.function(inputs=[index,],
+		# 	outputs = [self.errors(), self.outputs()], 
+		# 	givens = {
+		# 		self.x : data.test_x[index*batch_size:(index+1)*batch_size],
+		# 		self.y : data.test_y[index*batch_size:(index+1)*batch_size]
+		# })
 
-		self.valid = theano.function(inputs=[index,], 
-			outputs=self.errors(), 
-			givens={
-				self.x: data.valid_x[index*batch_size : (index+1)*batch_size],
-				self.y: data.valid_y[index*batch_size : (index+1)*batch_size]
-			})
+		# self.valid = theano.function(inputs=[index,], 
+		# 	outputs=self.errors(), 
+		# 	givens={
+		# 		self.x: data.valid_x[index*batch_size : (index+1)*batch_size],
+		# 		self.y: data.valid_y[index*batch_size : (index+1)*batch_size]
+		# 	})
 
 	def costs(self):
 
@@ -440,7 +464,9 @@ class sgd_optimizer(object):
 				this_batch_indices = randidx[batch_index*self.batch_size : (batch_index+1)*self.batch_size]
 
 				t0 = time.clock()
-				batch_avg_cost, batch_avg_error, _ = self.model.train(this_batch_indices, self.lr, self.momentum)
+				batch_avg_cost, batch_avg_error, _ = self.model.train(self.data.train_x[this_batch_indices],
+															self.data.train_y[this_batch_indices], 
+															batch_label_cpu, self.lr, self.momentum)
 				t1 = time.clock()
 
 				train_error[batch_index] = batch_avg_error
@@ -450,8 +476,12 @@ class sgd_optimizer(object):
 						epoch, batch_index+1, float(batch_avg_cost), float(batch_avg_error), float(t1-t0))
 
 			train_avg_loss = train_error.mean()
-			valid_avg_loss = np.mean([self.model.valid(i) for i in range(n_batches_valid)])
-			test_avg_loss = np.mean([self.model.test(i)[0] for i in range(n_batches_test)])
+
+			valid_avg_loss = np.mean([self.model.valid(self.data.valid_x[i*self.batch_size:(i+1)*self.batch_size], 
+				self.data.valid_y[i*self.batch_size:(i+1)*self.batch_size]) for i in range(n_batches_valid)])
+			
+			test_avg_loss = np.mean([self.model.test(self.data.test_x[i*self.batch_size:(i+1)*self.batch_size], 
+				self.data.test_y[i*self.batch_size:(i+1)*self.batch_size])[0] for i in range(n_batches_test)])
 			
 			if valid_avg_loss < 10/100.:
 				# decrease = (valid_loss_prev - valid_avg_loss)/valid_loss_prev

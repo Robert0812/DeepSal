@@ -92,9 +92,7 @@ class DataMan_viper(DataMan):
 
 		super(DataMan_viper, self).__init__()
 		self.patL = 48
-		self.step = 12
-
-		self.make_data()
+		self.step = 8
 
 	def _load_images_salmaps(self, datapath=None, imgext='bmp'):
 		''' load preliminary data (images, segmentations, and salience maps) '''
@@ -182,11 +180,15 @@ class DataMan_viper(DataMan):
 			patches += [imcrop(img, [self.xx[k]-r, self.yy[k]-r, l, l]) for k in ids2]
 			salscores += [np.mean(imcrop(sal, [self.xx[k]-r, self.yy[k]-r, l, l])) for k in ids2]
 
+		os.system('free -hm')
+
 		# convert image to data format (normalize & roll axis) that is appropriate for training usage
 		patches_norm = self._convert_data(patches)
 		salscores = np.asarray(salscores)
 		imgids = np.asarray(imgids)
 		ctrids = np.asarray(ctrids)
+
+		os.system('free -hm')
 
 		return imgids, ctrids, patches, patches_norm, salscores 
 
@@ -195,16 +197,20 @@ class DataMan_viper(DataMan):
 		''' this contains operations on images that make image become input data (cannot be shown) '''
 		
 		# convert from RGB to CIE-LAB color space
-		imgs_lab = [imnormalize(im) for im in imgs]
+		print 'RGB to LAB conversion'
+		imgs = [imnormalize(im) for im in imgs]
 		# roll axis to put channel axis to the first
-		imgs_cvt = [im.transpose((2, 0, 1)) for im in imgs_lab]
+		print 'Roll channel axis'
+		imgs = [im.transpose((2, 0, 1)) for im in imgs]
 		# flatten images
-		imgs_arr = np.asarray(imgs_cvt)
-		imgs_flatten = imflatten(imgs_arr)
+		print 'Flatten images'
+		imgs = np.asarray(imgs)
+		imgs = imflatten(imgs)
 		# normalize to be zero mean and unit std
-		imgs_norm = normalize01(imgs_flatten)
+		print 'Zero-mean & unit std normalization'
+		imgs = normalize01(imgs)
 
-		return imgs_norm
+		return imgs
 
 
 	def _shared_dataset(self, data_xy):
@@ -245,14 +251,187 @@ class DataMan_viper(DataMan):
 
 		# split into train and valid
 		nValid = np.int(len(train_x)*0.1)
-		train = [train_x[:-nValid], train_y[:-nValid]]
-		valid = [train_x[-nValid:], train_y[-nValid:]]
+		self.train_x, self.train_y = [train_x[:-nValid], train_y[:-nValid]]
+		self.valid_x, self.valid_y = [train_x[-nValid:], train_y[-nValid:]]
 		
-		test = [test_x, test_y]
-		data = [train, valid, test]
-		self._share2gpumem(data)
+		self.test_x, self.test_y = [test_x, test_y]
+		# data = [train, valid, test]
+		# self._share2gpumem(data)
 
+
+class DataMan_viper_small(DataMan):
+
+	def __init__(self):
+		''' initialization and parameter settings '''
+
+		super(DataMan_viper_small, self).__init__()
+		self.imH = 128
+		self.imW = 48
+		self.patL = 10
+		self.step = 4
+
+	def _load_images_salmaps(self, datapath=None, imgext='bmp'):
+		''' load preliminary data (images, segmentations, and salience maps) '''
+
+		if datapath is None:
+			if sys.platform == 'darwin':
+				homedir = '/Users/rzhao/'
+			else:
+				homedir = '/home/rzhao/'
+
+			datapath = homedir + 'Dropbox/ongoing/reid_jrnl/salgt/data_viper/'
+
+		filepath = datapath + 'query/'
+		imgfiles = sorted(glob(filepath + '*.' + imgext))
+		self.nPerson = len(imgfiles)
+		imgs = [imread(im) for im in imgfiles]
+
+		salfilepath = datapath + 'labels.pkl'
+		data = loadfile(salfilepath)
+		segmsks, salmsks = data
+		
+		imgs = [imresize(im, size=(self.imH, self.imW)) for im in imgs]
+		segmsks = [imresize(im, size=(self.imH, self.imW)) for im in segmsks]
+		salmsks = [imresize(im, size=(self.imH, self.imW))/255. for im in salmsks]
+
+		self.imgs = np.asarray(imgs) 
+		self.segmsks = np.asarray(segmsks)
+		self.salmsks = np.asarray(salmsks)
+
+		# load dense colorsift features
+		labeled_imidx_path = '../data_viper/labeled_imidx.mat'
+		tmp = loadfile(labeled_imidx_path)
+		labeled_imidx = tmp['labeled_imidx'].flatten()
+		feat_path = homedir + 'Dropbox/ongoing/reid_jrnl/salgt/data_viper/features.mat'
+		tmp = loadfile(feat_path)
+		self.feats = tmp['features'].astype(np.float)[labeled_imidx]
+
+
+	def _splitting_data(self, train_rate=0.5):
+		''' generate randomly splitted training / testing data indices ''' 
+
+		randidx = np.random.permutation(self.nPerson)
+		train_num = np.int(self.nPerson * train_rate)
+		train_idx = randidx[:train_num]
+		test_idx = randidx[train_num:]
 	
+		return train_idx, test_idx
+
+
+	def _gen_grids(self):
+		''' generate a grid of points for sampling '''
+		
+		h, w = self.imH, self.imW
+		r = np.int(self.patL/2.)
+
+		self.nx = len(np.arange(r, w-r, self.step))
+		self.ny = len(np.arange(r, h-r, self.step))
+		_x = np.ceil(np.linspace(r, w-r-1, self.nx)).astype(np.int)
+		_y = np.ceil(np.linspace(r, h-r-1, self.ny)).astype(np.int)
+		self.xx = np.tile(_x, (len(_y), 1)).flatten('F')
+		self.yy = np.tile(_y, (len(_x), 1)).transpose().flatten('F')
+
+
+	def _sampling_patch(self, spidx, augx=0):
+		''' sampling local patches for predicting salience score '''
+
+		# spf = lambda items, indices: map(lambda i: items[i], indices)
+		imgs 		=  [imnormalize(im) for im in self.imgs[spidx]] #spf(self.imgs, spidx)
+		segmsks 	=  self.segmsks[spidx]
+		salmsks 	=  self.salmsks[spidx]
+		features 	=  self.feats[spidx]
+
+		h, w = self.segmsks[0].shape
+		# l = np.int(self.patL/2.)
+		# sz = (self.patL, self.patL)
+		l = self.patL
+		r = np.int(l/2)
+
+		imgids = [] 		# image indices
+		ctrids = []			# center grid indices
+		patches = [] 		# cropped patches
+		salscores = [] 		# corresponding salience scores
+		patfeats = []		# colorsift feature of cropped patch
+
+		for idx, img, seg, sal, feat in zip(spidx, imgs, segmsks, salmsks, features):
+			
+			print idx
+			ids1 = []
+			ids2 = []
+			for i in range(len(self.xx)):
+				x = self.xx[i]
+				y = self.yy[i]
+				# if x-r>=0 and x+r<w and y-r>=0 and y+r<h and seg[y, x] > 0 :
+				if seg[y, x] > 0:
+					ids1.append(idx)
+					ids2.append(i)				
+
+			# crop patches centering on these points
+			imgids += ids1
+			ctrids += ids2
+			patches += [imcrop(img, [self.xx[k]-r, self.yy[k]-r, l, l]) for k in ids2]
+			patfeats += [feat[k] for k in ids2]
+			salscores += [np.mean(imcrop(sal, [self.xx[k]-r, self.yy[k]-r, l, l])) for k in ids2]
+			
+		# convert image to data format (normalize & roll axis) that is appropriate for training usage
+		imgids = np.asarray(imgids)
+		ctrids = np.asarray(ctrids)
+		patches = self._convert_data(patches)
+		patfeats = np.asarray(patfeats)
+		salscores = np.asarray(salscores)
+		
+		os.system('free -hm')
+
+		return imgids, ctrids, patches, patfeats, salscores
+
+
+	def _convert_data(self, imgs):
+		''' this contains operations on images that make image become input data (cannot be shown) '''
+		
+		# convert from RGB to CIE-LAB color space
+		# print 'RGB to LAB conversion'
+		# imgs = [imnormalize(im) for im in imgs]
+
+		# roll axis to put channel axis to the first
+		print 'Roll channel axis'
+		imgs = [im.transpose((2, 0, 1)) for im in imgs]
+		# flatten images
+		print 'Flatten images'
+		imgs = np.asarray(imgs)
+		imgs = imflatten(imgs)
+		# normalize to be zero mean and unit std
+		print 'Zero-mean & unit std normalization'
+		imgs = normalize01(imgs)
+
+		return imgs
+
+
+	def make_data(self):
+		''' make dataset for training '''
+
+		# read images
+		print 'reading ...'
+		self._load_images_salmaps()
+		
+		# splitting training / testing data
+		train_idx, test_idx = self._splitting_data(train_rate = 0.8)
+
+		# preprocessing
+		print 'sampling patches from each image ...'
+		self._gen_grids()
+		self.train_imgids, self.train_ctrids, train_x, train_feat, train_y = self._sampling_patch(train_idx)
+		self.test_imgids, self.test_ctrids, self.test_x, self.test_feat, self.test_y = self._sampling_patch(test_idx)
+
+
+		# split into train and valid
+		nValid = np.int(self.nPerson*0.2)
+		self.train_x, self.train_feat, self.train_y = [train_x[:-nValid], train_feat[:-nValid], train_y[:-nValid]]
+		self.valid_x, self.valid_feat, self.valid_y = [train_x[-nValid:], train_feat[-nValid:], train_y[-nValid:]]
+		
+		# self.test_x, self.test_feat, self.test_y = [test_x, test_feat, test_y]
+		# data = [train, valid, test]
+		# self._share2gpumem(data)
+
 
 class DataMan_msra(DataMan):
 

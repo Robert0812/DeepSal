@@ -33,7 +33,7 @@ def loadfile(file=None):
 	elif file[-3:] == 'mat':
 		data = loadmat(file)
 
-	elif file[-3:] in {'jpg', 'png', 'bmp'}:
+	elif file[-3:] in ['jpg', 'png', 'bmp']:
 		data = imread(file)
 
 	else:
@@ -65,7 +65,7 @@ def savefile(file, data):
 			fieldname = os.path.splitext(filename)[0]
 			savemat(file, mdict={fieldname: data[0]})
 
-		elif file[-3:] in {'jpg', 'png', 'bmp'}:
+		elif file[-3:] in ['jpg', 'png', 'bmp']:
 			imsave(file, data)
 
 		else:
