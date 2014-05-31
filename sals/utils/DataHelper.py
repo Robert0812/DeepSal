@@ -424,7 +424,7 @@ class DataMan_viper_small(DataMan):
 
 
 		# split into train and valid
-		nValid = np.int(self.nPerson*0.2)
+		nValid = np.int(len(train_x)*0.2)
 		self.train_x, self.train_feat, self.train_y = [train_x[:-nValid], train_feat[:-nValid], train_y[:-nValid]]
 		self.valid_x, self.valid_feat, self.valid_y = [train_x[-nValid:], train_feat[-nValid:], train_y[-nValid:]]
 		

@@ -510,6 +510,7 @@ class sgd_optimizer(object):
 			print 'train set error {0:.6f}, valid set error {1:.6f}'.format(train_avg_loss, valid_avg_loss)
 			print 'test set error {0:.6f}'.format(test_avg_loss)
 			print '================================================================='
+			time.sleep(1)
 
 		end_time = time.clock()
 		print 'The code run for %d epochs, with %f epochs/sec' % (
