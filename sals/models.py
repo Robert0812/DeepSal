@@ -441,7 +441,7 @@ class sgd_optimizer(object):
 	def fit_viper(self):
 
 		print 'fitting ...'
-		n_train = self.data.train_x.get_value(borrow=True).shape[0]
+		n_train = self.data.train_x.shape[0]
 		n_batches_train = np.int(self.data.train_x.shape[0]/(self.batch_size*1.0))
 		n_batches_valid = np.int(self.data.valid_x.shape[0]/(self.batch_size*1.0))
 		n_batches_test = np.int(self.data.test_x.shape[0]/(self.batch_size*1.0))
