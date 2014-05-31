@@ -441,10 +441,10 @@ class sgd_optimizer(object):
 	def fit_viper(self):
 
 		print 'fitting ...'
-		n_train = self.data.train_x.shape[0]
-		n_batches_train = np.int(self.data.train_x.shape[0]/(self.batch_size*1.0))
-		n_batches_valid = np.int(self.data.valid_x.shape[0]/(self.batch_size*1.0))
-		n_batches_test = np.int(self.data.test_x.shape[0]/(self.batch_size*1.0))
+		n_train = self.data.train_feat.shape[0]
+		n_batches_train = np.int(self.data.train_feat.shape[0]/(self.batch_size*1.0))
+		n_batches_valid = np.int(self.data.valid_feat.shape[0]/(self.batch_size*1.0))
+		n_batches_test = np.int(self.data.test_feat.shape[0]/(self.batch_size*1.0))
 		index_show = np.floor(np.linspace(0, n_batches_train-1, 10))
 
 		start_time = time.clock()
@@ -454,11 +454,11 @@ class sgd_optimizer(object):
 		count = 0
 		train_error = np.zeros(n_batches_train)
 
-		self.data.train_x = self.data.train_x.astype(np.float32)
+		self.data.train_feat = self.data.train_feat.astype(np.float32)
 		self.data.train_y = self.data.train_y.astype(np.float32)
-		self.data.valid_x = self.data.valid_x.astype(np.float32)
+		self.data.valid_feat = self.data.valid_feat.astype(np.float32)
 		self.data.valid_y = self.data.valid_y.astype(np.float32)
-		self.data.test_x = self.data.test_x.astype(np.float32)
+		self.data.test_feat = self.data.test_feat.astype(np.float32)
 		self.data.test_y = self.data.test_y.astype(np.float32)
 
 		while (epoch < self.n_epochs):
@@ -472,7 +472,7 @@ class sgd_optimizer(object):
 				this_batch_indices = randidx[batch_index*self.batch_size : (batch_index+1)*self.batch_size]
 
 				t0 = time.clock()
-				batch_avg_cost, batch_avg_error, _ = self.model.train(self.data.train_x[this_batch_indices],
+				batch_avg_cost, batch_avg_error, _ = self.model.train(self.data.train_feat[this_batch_indices],
 															self.data.train_y[this_batch_indices], 
 															self.lr, self.momentum)
 				t1 = time.clock()
@@ -485,10 +485,10 @@ class sgd_optimizer(object):
 
 			train_avg_loss = train_error.mean()
 
-			valid_avg_loss = np.mean([self.model.valid(self.data.valid_x[i*self.batch_size:(i+1)*self.batch_size], 
+			valid_avg_loss = np.mean([self.model.valid(self.data.valid_feat[i*self.batch_size:(i+1)*self.batch_size], 
 				self.data.valid_y[i*self.batch_size:(i+1)*self.batch_size]) for i in range(n_batches_valid)])
 			
-			test_avg_loss = np.mean([self.model.test(self.data.test_x[i*self.batch_size:(i+1)*self.batch_size], 
+			test_avg_loss = np.mean([self.model.test(self.data.test_feat[i*self.batch_size:(i+1)*self.batch_size], 
 				self.data.test_y[i*self.batch_size:(i+1)*self.batch_size])[0] for i in range(n_batches_test)])
 			
 			if valid_avg_loss < 10/100.:
