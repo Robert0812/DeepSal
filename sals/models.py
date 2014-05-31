@@ -442,9 +442,9 @@ class sgd_optimizer(object):
 
 		print 'fitting ...'
 		n_train = self.data.train_x.get_value(borrow=True).shape[0]
-		n_batches_train = np.int(self.data.train_x.get_value(borrow=True).shape[0]/(self.batch_size*1.0))
-		n_batches_valid = np.int(self.data.valid_x.get_value(borrow=True).shape[0]/(self.batch_size*1.0))
-		n_batches_test = np.int(self.data.test_x.get_value(borrow=True).shape[0]/(self.batch_size*1.0))
+		n_batches_train = np.int(self.data.train_x.shape[0]/(self.batch_size*1.0))
+		n_batches_valid = np.int(self.data.valid_x.shape[0]/(self.batch_size*1.0))
+		n_batches_test = np.int(self.data.test_x.shape[0]/(self.batch_size*1.0))
 		index_show = np.floor(np.linspace(0, n_batches_train-1, 10))
 
 		start_time = time.clock()
@@ -466,7 +466,7 @@ class sgd_optimizer(object):
 				t0 = time.clock()
 				batch_avg_cost, batch_avg_error, _ = self.model.train(self.data.train_x[this_batch_indices],
 															self.data.train_y[this_batch_indices], 
-															batch_label_cpu, self.lr, self.momentum)
+															self.lr, self.momentum)
 				t1 = time.clock()
 
 				train_error[batch_index] = batch_avg_error
