@@ -462,7 +462,7 @@ class sgd_optimizer(object):
 			for batch_index in range(n_batches_train):
 
 				this_batch_indices = randidx[batch_index*self.batch_size : (batch_index+1)*self.batch_size]
-
+				print self.data.train_x.dtype
 				t0 = time.clock()
 				batch_avg_cost, batch_avg_error, _ = self.model.train(self.data.train_x[this_batch_indices],
 															self.data.train_y[this_batch_indices], 
