@@ -292,7 +292,7 @@ class GeneralModel(object):
 		batch_data = T.fmatrix()
 		batch_label = T.fvector()
 		
-		n_train = data.train_x.get_value(borrow=True).shape[0]
+		n_train = data.train_x.shape[0]
 
 		self.train = theano.function(inputs=[batch_data, batch_label, lr, momentum], 
 			outputs=[self.costs(), self.errors(), self.outputs()], 
