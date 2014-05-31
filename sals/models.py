@@ -453,6 +453,14 @@ class sgd_optimizer(object):
 		check_period = 10.
 		count = 0
 		train_error = np.zeros(n_batches_train)
+
+		self.data.train_x = self.data.train_x.astype(np.float32)
+		self.data.train_y = self.data.train_y.astype(np.float32)
+		self.data.valid_x = self.data.valid_x.astype(np.float32)
+		self.data.valid_y = self.data.valid_y.astype(np.float32)
+		self.data.test_x = self.data.test_x.astype(np.float32)
+		self.data.test_y = self.data.test_y.astype(np.float32)
+
 		while (epoch < self.n_epochs):
 			epoch += 1
 			# generate a random set of batch indices
@@ -462,7 +470,7 @@ class sgd_optimizer(object):
 			for batch_index in range(n_batches_train):
 
 				this_batch_indices = randidx[batch_index*self.batch_size : (batch_index+1)*self.batch_size]
-				print self.data.train_x.dtype
+
 				t0 = time.clock()
 				batch_avg_cost, batch_avg_error, _ = self.model.train(self.data.train_x[this_batch_indices],
 															self.data.train_y[this_batch_indices], 
